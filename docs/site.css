@@ -1,0 +1,362 @@
+/* The extension's look, scaled up for the web: the same tokens as
+   popup.css, hairline borders by default, and the logo's bold outline,
+   offset slab and grey drop kept for the things that matter — buttons,
+   pills and the feature cards. */
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --bg-alt: #f5f5f8;
+  --ink: #111111;
+  --text: #16161a;
+  --text-muted: #6b6c78;
+  --border: rgba(0, 0, 0, 0.09);
+  --border-strong: rgba(0, 0, 0, 0.16);
+  --accent-1: #ffc41e;
+  --accent-ink: #9a6200;
+  --on-accent: #16161a;
+  --accent-soft: rgba(255, 196, 30, 0.2);
+  --drop: 3px 4px 0 #c9c9cf;
+  --route-line: #d4d4dc;
+  --icon-shadow: #c9c9cf;
+  --key-slab: #b4b4be;
+  --radius: 12px;
+}
+
+/* Dark follows the system unless the header toggle has pinned a theme. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #1b1b21;
+    --bg-alt: #24242c;
+    --ink: #ececf2;
+    --text: #ececf2;
+    --text-muted: #9a9cab;
+    --border: rgba(255, 255, 255, 0.09);
+    --border-strong: rgba(255, 255, 255, 0.16);
+    --accent-ink: #ffc41e;
+    --accent-soft: rgba(255, 196, 30, 0.16);
+    --drop: 3px 4px 0 #000000;
+    --route-line: #3a3a46;
+    --icon-shadow: #000000;
+    --key-slab: #44444f;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1b1b21;
+  --bg-alt: #24242c;
+  --ink: #ececf2;
+  --text: #ececf2;
+  --text-muted: #9a9cab;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --accent-ink: #ffc41e;
+  --accent-soft: rgba(255, 196, 30, 0.16);
+  --drop: 3px 4px 0 #000000;
+  --route-line: #3a3a46;
+  --icon-shadow: #000000;
+  --key-slab: #44444f;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "Nunito", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent-ink);
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+  display: block;
+}
+
+.icon .fill {
+  fill: var(--accent-1);
+}
+
+/* ---------- Header: the popup's header row, full width ---------- */
+
+.site-header {
+  border-bottom: 1px solid var(--border);
+}
+
+.site-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 16px 24px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.brand-icon {
+  width: 38px;
+  height: 38px;
+  display: block;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.brand-title {
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  line-height: 1.1;
+}
+
+.brand-tag {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+  padding-bottom: 4px;
+}
+
+/* ---------- Keys: every control is a tiny copy of the logo's tile ---------- */
+
+.key,
+.btn {
+  --ring: 0 0 0 1.5px var(--bg), 0 0 0 2.75px var(--ink);
+  --face: linear-gradient(180deg, var(--bg) 0%, var(--bg) 45%, var(--bg-alt) 100%);
+  --face-hover: linear-gradient(180deg, var(--bg) 0%, var(--accent-soft) 100%);
+  border: 2px solid var(--ink);
+  background: var(--face);
+  box-shadow: var(--ring), 3px 4px 0 2.75px var(--key-slab);
+  color: var(--ink);
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+.key:hover,
+.btn:hover {
+  background: var(--face-hover);
+  transform: translate(-1px, -1px);
+  box-shadow: var(--ring), 4px 5px 0 2.75px var(--key-slab);
+}
+
+.key:active,
+.btn:active {
+  transform: translate(3px, 4px);
+  box-shadow: var(--ring);
+}
+
+.key:focus-visible,
+.btn:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 4px;
+}
+
+.key {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.key .icon {
+  filter: drop-shadow(1.5px 2px 0 var(--icon-shadow));
+}
+
+.key:active .icon {
+  filter: none;
+}
+
+/* theme.js marks the toggle with the theme in effect; show the other one. */
+#themeToggle .icon-sun,
+#themeToggle[data-mode="dark"] .icon-moon {
+  display: none;
+}
+
+#themeToggle[data-mode="dark"] .icon-sun {
+  display: block;
+}
+
+/* Yellow stays yellow, like the logo's bee. */
+.btn {
+  --face: linear-gradient(180deg, color-mix(in srgb, var(--accent-1) 78%, #fff) 0%, var(--accent-1) 60%);
+  --face-hover: linear-gradient(180deg, color-mix(in srgb, var(--accent-1) 68%, #fff) 0%, color-mix(in srgb, var(--accent-1) 90%, #fff) 60%);
+  color: var(--on-accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 800;
+  border-radius: 24px;
+  padding: 10px 22px;
+}
+
+.btn-sm {
+  font-size: 14px;
+  padding: 6px 16px;
+}
+
+.btn-outline {
+  --face: linear-gradient(180deg, var(--bg) 0%, var(--bg) 45%, var(--bg-alt) 100%);
+  --face-hover: linear-gradient(180deg, var(--bg) 0%, var(--accent-soft) 100%);
+  color: var(--ink);
+}
+
+.btn .icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* The popup's route pill. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent-1);
+  color: var(--on-accent);
+  border: 2px solid var(--ink);
+  box-shadow: var(--drop);
+  padding: 2px 13px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* ---------- Footer ---------- */
+
+.site-footer {
+  border-top: 1px solid var(--border);
+}
+
+.site-footer-inner {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.site-footer .brand-title {
+  font-size: 18px;
+}
+
+.site-footer .brand-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.site-footer-inner > span {
+  text-align: center;
+}
+
+.footer-links {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.footer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-muted);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.footer-link:hover {
+  color: var(--text);
+}
+
+.footer-link .icon {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.9;
+}
+
+@media (max-width: 760px) {
+  .brand-tag {
+    display: none;
+  }
+
+  .site-footer-inner {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .footer-links {
+    justify-self: center;
+  }
+}
+
+@media (max-width: 420px) {
+  .site-header-inner {
+    padding: 14px 16px;
+  }
+
+  .actions .btn-sm {
+    padding: 6px 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .key,
+  .btn {
+    transition: none;
+  }
+}
