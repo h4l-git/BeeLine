@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BeeLine — Privacy Policy</title>
+  <title>BeeLine - Privacy Policy</title>
   <meta name="description" content="Privacy policy for the BeeLine Chrome extension." />
   <meta name="theme-color" content="#FFC41E" />
   <link rel="icon" href="favicon.png" type="image/png" sizes="32x32" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,500;0,600;0,700;0,800;0,900;1,900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="site.css" />
   <script src="theme.js"></script>
   <style>
@@ -65,7 +65,7 @@
           <svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path class="fill" d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
           <svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/><circle class="fill" cx="12" cy="12" r="4.5"/></svg>
         </button>
-        <a href="https://chromewebstore.google.com/detail/beeline/YOUR_EXTENSION_ID" class="btn btn-sm">Add to Chrome</a>
+        <a href="https://chromewebstore.google.com/detail/beeline/YOUR_EXTENSION_ID" class="btn btn-sm"><span class="label-full">Add to Chrome</span><span class="label-short">Install</span></a>
       </div>
     </div>
   </header>
@@ -78,13 +78,13 @@
     <h1>Privacy Policy</h1>
     <p class="updated"><span class="pill">Last updated: 18 September 2026</span></p>
 
-    <p>BeeLine is a Chrome extension that shows transit routes, connections, and travel time from your home to your work — or to a job listing you’re viewing. This page explains what data BeeLine accesses, stores, and sends, and why.</p>
+    <p>BeeLine is a Chrome extension that shows transit routes, connections, and travel time from your home to your work - or to a job listing you’re viewing. This page explains what data BeeLine accesses, stores, and sends, and why.</p>
 
     <h2>What BeeLine accesses</h2>
     <ul>
       <li><strong>Your saved addresses and API keys</strong>, which you enter in Settings. These are used to request a transit route and, if you choose, to ask AI to find a workplace location.</li>
       <li><strong>Job listing pages</strong> on supported boards (including LinkedIn, Indeed, Glassdoor, ZipRecruiter, Reed, Totaljobs, Monster, and CV-Library). On those sites, BeeLine looks for a workplace address in structured job data (and, on LinkedIn, in visible page text) so it can show the commute to that job.</li>
-      <li><strong>Page text, only if you click “Use AI”.</strong> If no address can be found automatically, BeeLine may offer to send a short excerpt of the posting to Anthropic. That only happens after you click the button — it is never sent in the background.</li>
+      <li><strong>Page text, only if you click “Use AI”.</strong> If no address can be found automatically, BeeLine may offer to send a short excerpt of the posting to Anthropic. That only happens after you click the button - it is never sent in the background.</li>
     </ul>
 
     <h2>What BeeLine stores</h2>
@@ -101,22 +101,22 @@
     <h2>What BeeLine sends, and to whom</h2>
     <p>BeeLine does not operate its own backend. Requests go only to services you configure, and only as needed to show a route:</p>
     <ul>
-      <li><strong>Google Maps Directions API</strong> (<code>maps.googleapis.com</code>) — when you open the popup to see a commute, BeeLine sends your origin and destination (home, work, or a detected job address) with your API key to fetch transit directions. The same origin and destination may be loaded in a Maps embed so you can see the route.</li>
-      <li><strong>Anthropic API</strong> (<code>api.anthropic.com</code>) — only if you have added an Anthropic key and you click “Use AI” on a job page where no address was found. BeeLine then sends a truncated excerpt of the posting (up to 6,000 characters) so the model can look for a workplace location. Your browsing history is not sent.</li>
-      <li><strong>Google Maps</strong> (in the browser) — if you click through to open the full directions, Chrome navigates to Google Maps with the same origin and destination.</li>
+      <li><strong>Google Maps Directions API</strong> (<code>maps.googleapis.com</code>) - when you open the popup to see a commute, BeeLine sends your origin and destination (home, work, or a detected job address) with your API key to fetch transit directions. The same origin and destination may be loaded in a Maps embed so you can see the route.</li>
+      <li><strong>Anthropic API</strong> (<code>api.anthropic.com</code>) - only if you have added an Anthropic key and you click “Use AI” on a job page where no address was found. BeeLine then sends a truncated excerpt of the posting (up to 6,000 characters) so the model can look for a workplace location. Your browsing history is not sent.</li>
+      <li><strong>Google Maps</strong> (in the browser) - if you click through to open the full directions, Chrome navigates to Google Maps with the same origin and destination.</li>
     </ul>
     <p>BeeLine does not sell, share, or use your data for advertising, and does not track your browsing activity.</p>
 
     <h2>Permissions</h2>
     <ul>
-      <li><code>storage</code> — lets BeeLine save your settings and the in-session job detection described above.</li>
-      <li>Access to <code>maps.googleapis.com</code> — lets BeeLine fetch transit directions and show a map embed with your own Google Maps API key.</li>
-      <li>Access to <code>api.anthropic.com</code> — lets BeeLine call Anthropic only when you click “Use AI”.</li>
-      <li>Content scripts on supported job sites — let BeeLine read workplace details from a listing so the popup can show that commute.</li>
+      <li><code>storage</code> - lets BeeLine save your settings and the in-session job detection described above.</li>
+      <li>Access to <code>maps.googleapis.com</code> - lets BeeLine fetch transit directions and show a map embed with your own Google Maps API key.</li>
+      <li>Access to <code>api.anthropic.com</code> - lets BeeLine call Anthropic only when you click “Use AI”.</li>
+      <li>Content scripts on supported job sites - let BeeLine read workplace details from a listing so the popup can show that commute.</li>
     </ul>
 
     <h2>Contact</h2>
-    <p>Questions about this policy can be raised via the <a href="https://github.com/h4l-git/commuter">BeeLine GitHub repository</a>.</p>
+    <p>Questions about this policy can be raised via the <a href="https://github.com/h4l-git/BeeLine">BeeLine GitHub repository</a>.</p>
   </main>
 
   <footer class="site-footer">
@@ -127,7 +127,7 @@
       </a>
       <span>© 2026 <a href="https://h4l-git.github.io/" class="footer-link" style="text-decoration: underline;">H4L</a> · Powered by GitHub Pages</span>
       <div class="footer-links">
-        <a href="https://github.com/h4l-git/commuter" class="footer-link">GitHub</a>
+        <a href="https://github.com/h4l-git/BeeLine" class="footer-link">GitHub</a>
         <a href="index.html" class="footer-link">Home</a>
       </div>
     </div>

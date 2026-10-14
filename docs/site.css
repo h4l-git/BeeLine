@@ -1,6 +1,6 @@
 /* The extension's look, scaled up for the web: the same tokens as
    popup.css, hairline borders by default, and the logo's bold outline,
-   offset slab and grey drop kept for the things that matter — buttons,
+   offset slab and grey drop kept for the things that matter - buttons,
    pills and the feature cards. */
 :root {
   color-scheme: light dark;
@@ -246,6 +246,10 @@ a {
   color: var(--ink);
 }
 
+.label-short {
+  display: none;
+}
+
 .btn .icon {
   width: 16px;
   height: 16px;
@@ -347,6 +351,15 @@ a {
 
   .actions .btn-sm {
     padding: 6px 12px;
+  }
+
+  /* Small phones can't fit the full header label beside the brand. */
+  .label-full {
+    display: none;
+  }
+
+  .label-short {
+    display: inline;
   }
 }
 
