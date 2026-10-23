@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "BeeLine",
-  "version": "1.1.0",
-  "description": "Shows the transit route, connections, and travel time from your home to your work — or to a job you're viewing.",
+  "version": "0.1.1",
+  "description": "See the public transport commute to any job you're viewing, or your daily trip to work, in one click.",
   "permissions": ["storage", "geolocation"],
   "host_permissions": [
     "https://routes.googleapis.com/*",
