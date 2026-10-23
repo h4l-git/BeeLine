@@ -160,7 +160,6 @@ a {
 
 /* ---------- Keys: every control is a tiny copy of the logo's tile ---------- */
 
-.key,
 .btn {
   --ring: 0 0 0 1.5px var(--bg), 0 0 0 2.75px var(--ink);
   --face: linear-gradient(180deg, var(--bg) 0%, var(--bg) 45%, var(--bg-alt) 100%);
@@ -175,32 +174,103 @@ a {
   transition: transform 0.08s ease, box-shadow 0.08s ease;
 }
 
-.key:hover,
 .btn:hover {
   background: var(--face-hover);
   transform: translate(-1px, -1px);
   box-shadow: var(--ring), 4px 5px 0 2.75px var(--key-slab);
 }
 
-.key:active,
 .btn:active {
   transform: translate(3px, 4px);
   box-shadow: var(--ring);
 }
 
-.key:focus-visible,
 .btn:focus-visible {
   outline: 2px solid var(--accent-ink);
   outline-offset: 4px;
 }
 
+/* Icon keys are the same tile cut as honeycomb cells. clip-path would also
+   cut away borders and shadows, so the tile is rebuilt in layers: ::before
+   is the face (gradient triangles keep the gap around it plain), ::after is
+   both outlines as one hexagon ring cut with evenodd, and a drop-shadow on
+   the key casts the slab in the same shape. The box is 36 × 42 because a
+   regular hexagon is 2/√3 as tall as it is wide; vertical offsets are
+   horizontal ones × 1.155 for the same reason. */
 .key {
+  --face: linear-gradient(180deg, var(--bg) 0%, var(--bg) 45%, var(--bg-alt) 100%);
+  --face-hover: linear-gradient(180deg, var(--bg) 0%, var(--accent-soft) 100%);
+  --hex-face: var(--face);
+  --hex-line: var(--ink);
+  --hex-corner: calc(50% - 3px) calc(25% - 1.73px) no-repeat;
+  position: relative;
+  isolation: isolate;
   width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: inherit;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  filter: drop-shadow(3px 4px 0 var(--key-slab));
+  transition: transform 0.08s ease, filter 0.08s ease;
+}
+
+.key::before,
+.key::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+}
+
+/* Reaches into the outer line so no seam shows. The face stops on the
+   middle of the thick outline, which hides the triangles' hard edges. */
+.key::before {
+  inset: -2.31px -2px;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background:
+    linear-gradient(to top left, transparent 50%, var(--bg) 50%) left 3px top 3.46px / var(--hex-corner),
+    linear-gradient(to top right, transparent 50%, var(--bg) 50%) right 3px top 3.46px / var(--hex-corner),
+    linear-gradient(to bottom left, transparent 50%, var(--bg) 50%) left 3px bottom 3.46px / var(--hex-corner),
+    linear-gradient(to bottom right, transparent 50%, var(--bg) 50%) right 3px bottom 3.46px / var(--hex-corner),
+    var(--hex-face) left 3px top 3.46px / calc(100% - 6px) calc(100% - 6.93px) no-repeat,
+    var(--bg);
+}
+
+/* Four nested hexagons: outer edge, thin line, thick line, face. */
+.key::after {
+  inset: -3.18px -2.75px;
+  background: var(--hex-line);
+  clip-path: polygon(evenodd,
+    50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%, 50% 0,
+    50% 1.44px, calc(100% - 1.25px) calc(25% + 0.72px), calc(100% - 1.25px) calc(75% - 0.72px),
+    50% calc(100% - 1.44px), 1.25px calc(75% - 0.72px), 1.25px calc(25% + 0.72px), 50% 1.44px,
+    50% 3.18px, calc(100% - 2.75px) calc(25% + 1.59px), calc(100% - 2.75px) calc(75% - 1.59px),
+    50% calc(100% - 3.18px), 2.75px calc(75% - 1.59px), 2.75px calc(25% + 1.59px), 50% 3.18px,
+    50% 5.49px, calc(100% - 4.75px) calc(25% + 2.74px), calc(100% - 4.75px) calc(75% - 2.74px),
+    50% calc(100% - 5.49px), 4.75px calc(75% - 2.74px), 4.75px calc(25% + 2.74px), 50% 5.49px);
+}
+
+.key:hover {
+  --hex-face: var(--face-hover);
+  transform: translate(-1px, -1px);
+  filter: drop-shadow(4px 5px 0 var(--key-slab));
+}
+
+.key:active {
+  transform: translate(3px, 4px);
+  filter: drop-shadow(0 0 0 var(--key-slab));
+}
+
+/* A rectangular outline would look odd around a hexagon (and would cast
+   the slab too), so focus turns the outlines honey instead. */
+.key:focus-visible {
+  outline: none;
+  --hex-line: var(--accent-ink);
 }
 
 .key .icon {

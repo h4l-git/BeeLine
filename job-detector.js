@@ -47,6 +47,12 @@ function formatAddresses(jobLocation) {
   return [...new Set(addresses)];
 }
 
+function companyName(job) {
+  const org = job.hiringOrganization;
+  if (!org) return null;
+  return (typeof org === "string" ? org : org.name) || null;
+}
+
 function detectJobFromSchema() {
   const postings = readJobPostings();
   if (!postings.length) return null;
@@ -56,12 +62,168 @@ function detectJobFromSchema() {
     if (addresses.length) {
       return {
         addresses,
-        title: job.title || document.title,
-        company: job.hiringOrganization ? job.hiringOrganization.name : null,
+        title: job.title || null,
+        company: companyName(job),
       };
     }
   }
   return null;
+}
+
+// LinkedIn names the open job by id: ?currentJobId= on search pages, or the
+// end of the path on /jobs/view/<slug>-<id> pages.
+function linkedInJobId() {
+  const param = new URLSearchParams(location.search).get("currentJobId");
+  if (param) return param;
+  const match = location.pathname.match(/\/jobs\/view\/(?:[^/]*-)?(\d+)/);
+  return match ? match[1] : null;
+}
+
+// Where each board shows the open job's title and company. The tab title is
+// no use here: on search pages it describes the search ("Developer jobs in
+// Manchester | Indeed"), not the job. Selectors are tried in order. Search
+// pages list many jobs, so titles point at the open job's own header (scope
+// narrows to it where the board has one) and the company is the one nearest
+// that title. "{id}" is LinkedIn's job id.
+const JOB_CARDS = [
+  {
+    host: "indeed.",
+    scope: '[data-testid="desktop-job-header"]',
+    title: ['[data-testid="vj-job-title"]', '[data-testid="jobsearch-JobInfoHeader-title"]'],
+    company: [
+      '[data-testid="vj-company-name"]',
+      '[data-testid="company-name"]',
+      '[data-testid="inlineHeader-companyName"]',
+      'a[href*="/cmp/"]',
+    ],
+  },
+  {
+    host: "linkedin.com",
+    title: [
+      ".job-details-jobs-unified-top-card__job-title",
+      ".jobs-unified-top-card__job-title",
+      ".top-card-layout__title",
+      'a[href*="/jobs/view/"][href*="{id}"]',
+    ],
+    company: [
+      ".job-details-jobs-unified-top-card__company-name",
+      ".jobs-unified-top-card__company-name",
+      ".topcard__org-name-link",
+      'a[href*="/company/"]',
+    ],
+  },
+  {
+    host: "glassdoor.",
+    title: ['h1[id^="jd-job-title"]'],
+    company: ['[class*="EmployerProfile_employerName"]', '[data-test="employer-name"]'],
+  },
+  {
+    host: "totaljobs.com",
+    title: ['[data-at="header-job-title"]'],
+    company: ['[data-at="metadata-company-name"]'],
+  },
+  {
+    host: "reed.co.uk",
+    title: ['[data-qa="job-title"]'],
+    company: ['[data-qa="job-posted-by"] a'],
+  },
+  {
+    host: "monster.com",
+    title: ['[data-testid="jobTitle"]'],
+    company: ['[data-testid="company"]'],
+  },
+  {
+    host: "ziprecruiter.com",
+    title: ["h1"],
+    company: ['a[href*="/co/"]'],
+  },
+];
+
+// First line only: Glassdoor puts the rating under the company name, and
+// Indeed adds a hidden " - job post" to its titles.
+function firstLine(el) {
+  const line = (el.innerText || el.textContent || "").split("\n").map((s) => s.trim()).find(Boolean);
+  return line ? line.replace(/\s+-\s+job post$/i, "") : null;
+}
+
+function matchesWithText(root, selectors) {
+  const id = linkedInJobId();
+  const found = [];
+  for (const selector of selectors) {
+    if (selector.includes("{id}") && !id) continue;
+    for (const el of root.querySelectorAll(selector.replace("{id}", id))) {
+      if (firstLine(el)) found.push(el);
+    }
+  }
+  return found;
+}
+
+// The company shown closest to the title: climb a few levels from the title
+// and take the first company element found, so a search page's other job
+// cards are never reached first.
+function companyNear(titleEl, selectors, root) {
+  let cur = titleEl;
+  for (let i = 0; i < 8 && cur && cur !== root.parentElement; i++) {
+    const [el] = matchesWithText(cur, selectors);
+    if (el) return firstLine(el);
+    cur = cur.parentElement;
+  }
+  return null;
+}
+
+function jobNameFromCard() {
+  const site = JOB_CARDS.find((s) => location.hostname.includes(s.host));
+  if (!site) return null;
+  const root = (site.scope && document.querySelector(site.scope)) || document.body;
+  const titles = matchesWithText(root, site.title);
+  if (!titles.length) return null;
+  // Prefer a title that has its company beside it (LinkedIn's detail panel
+  // over the matching list card, which may not link the company).
+  for (const titleEl of titles) {
+    const company = companyNear(titleEl, site.company, root);
+    if (company) return { title: firstLine(titleEl), company };
+  }
+  return { title: firstLine(titles[0]), company: null };
+}
+
+// The open job's title and company: from its card on the page, else from the
+// page's job schema. Either can be null; callers fall back to "Job posting".
+function jobNameFromPage() {
+  const card = jobNameFromCard();
+  if (card && card.company) return card;
+  for (const job of readJobPostings()) {
+    if (job.title) {
+      return { title: (card && card.title) || job.title, company: companyName(job) };
+    }
+  }
+  return card || { title: null, company: null };
+}
+
+// A link to the advert itself. On search pages the address bar holds the
+// results list (and may not name the open job at all), so find the open job's
+// id on the page and build its own link from that.
+function advertUrl() {
+  const params = new URLSearchParams(location.search);
+  const host = location.hostname;
+
+  if (host.includes("linkedin.com") && params.get("currentJobId")) {
+    return `https://www.linkedin.com/jobs/view/${params.get("currentJobId")}/`;
+  }
+
+  if (host.includes("indeed.") && !location.pathname.startsWith("/viewjob")) {
+    const highlighted = document.querySelector(".vjs-highlight [data-jk]");
+    const jk = params.get("vjk") || (highlighted && highlighted.dataset.jk);
+    if (jk) return `${location.origin}/viewjob?jk=${jk}`;
+  }
+
+  if (host.includes("glassdoor.")) {
+    const titleEl = document.querySelector('h1[id^="jd-job-title-"]');
+    const jl = titleEl && titleEl.id.replace("jd-job-title-", "");
+    const link = jl && document.querySelector(`a[href*="jl=${jl}"]`);
+    if (link) return link.href;
+  }
+
+  return location.href;
 }
 
 // LinkedIn's logged-in view doesn't embed JobPosting schema, so these fall
@@ -150,9 +312,10 @@ function extractFromViewPage() {
   };
 }
 
+// The open job's own link also tells jobs apart on search pages that swap
+// the job in place without changing the address bar.
 function jobIdentifier() {
-  const idParam = new URLSearchParams(location.search).get("currentJobId");
-  return idParam || location.href;
+  return advertUrl();
 }
 
 function looksLikeJobPage() {
@@ -167,6 +330,18 @@ function looksLikeJobPage() {
 // instantly instead of re-running detection just to be deduped afterwards.
 const handledJobIds = new Set();
 
+// The job found on this page, shared with location-highlighter.js (content
+// scripts share one scope), which only marks up places on job pages.
+let currentJob = null;
+
+function isJobPage() {
+  return handledJobIds.has(jobIdentifier());
+}
+
+function announceJobPage() {
+  if (typeof onJobPageDetected === "function") onJobPageDetected();
+}
+
 function detectAndSend() {
   const id = jobIdentifier();
   if (handledJobIds.has(id)) return;
@@ -179,7 +354,16 @@ function detectAndSend() {
 
   if (result && result.addresses && result.addresses.length) {
     handledJobIds.add(id);
-    chrome.runtime.sendMessage({ type: "JOB_DETECTED", ...result });
+    // The job card's name beats what the address finders guessed.
+    const card = jobNameFromCard() || {};
+    currentJob = {
+      ...result,
+      title: card.title || result.title,
+      company: card.company || result.company,
+      url: advertUrl(),
+    };
+    chrome.runtime.sendMessage({ type: "JOB_DETECTED", ...currentJob });
+    announceJobPage();
     return;
   }
 
@@ -188,11 +372,14 @@ function detectAndSend() {
   // giving up.
   if (!looksLikeJobPage()) return;
   handledJobIds.add(id);
+  currentJob = null;
+  announceJobPage();
 
   chrome.runtime.sendMessage({
     type: "JOB_TEXT_ONLY",
     text: (document.body.innerText || "").slice(0, 6000),
-    title: document.title,
+    ...jobNameFromPage(),
+    url: advertUrl(),
   });
 }
 

@@ -1,0 +1,30 @@
+name = "beeline-proxy"
+main = "worker.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+# The Google key is a secret, never in this file:
+#   npx wrangler secret put GOOGLE_MAPS_KEY
+
+[vars]
+# Daily caps. Google's free allowance is 10,000 requests a month per API,
+# so keep each *_PER_DAY at or below ~320.
+ROUTES_PER_DAY = 300
+ROUTES_PER_USER_PER_DAY = 100
+ROUTES_PER_IP_PER_DAY = 150
+GEOCODING_PER_DAY = 300
+GEOCODING_PER_USER_PER_DAY = 5
+GEOCODING_PER_IP_PER_DAY = 15
+
+# Comma-separated, e.g. "chrome-extension://abcdefghijklmnopabcdefghijklmnop".
+# Leave empty to accept any origin (handy while developing unpacked).
+ALLOWED_ORIGINS = ""
+
+[[durable_objects.bindings]]
+name = "LIMITER"
+class_name = "Limiter"
+
+# SQLite-backed Durable Objects are available on the Workers Free plan.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Limiter"]

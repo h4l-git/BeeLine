@@ -1,148 +1,402 @@
+/* Calm by default, like Glyph: hairline borders and quiet controls. The
+   logo's bold black outline and grey drop shadow are kept for the few
+   things that matter — the route pill, the journey card and primary
+   buttons — so they stand out instead of competing. */
 :root {
   color-scheme: light dark;
   --bg: #ffffff;
-  --bg-alt: #f6f7fb;
-  --text: #14151a;
-  --text-muted: #6b7280;
-  --border: #ececf2;
-  --accent-1: #6366f1;
-  --accent-2: #8b5cf6;
-  --danger-bg: #fef2f2;
-  --danger-fg: #b91c1c;
-  --shadow: 0 8px 24px rgba(20, 21, 26, 0.08);
-  --overlay-hover: rgba(255, 255, 255, 0.2);
+  --bg-alt: #f5f5f8;
+  --ink: #111111;
+  --text: #16161a;
+  --text-muted: #6b6c78;
+  --border: rgba(0, 0, 0, 0.09);
+  --border-strong: rgba(0, 0, 0, 0.16);
+  --hover: rgba(0, 0, 0, 0.05);
+  /* The colour theme (palettes.js, applied by theme.js) swaps these two;
+     every other accent token is worked out from them. */
+  --accent-1: #ffc41e;
+  --accent-deep: #9a6200;
+  --accent-ink: var(--accent-deep);
+  --on-accent: #16161a;
+  --accent-soft: color-mix(in srgb, var(--accent-1) 20%, transparent);
+  --danger-bg: #fdf0f0;
+  --danger-fg: #b42318;
+  --drop: 3px 4px 0 #c9c9cf;
+  --route-line: #d4d4dc;
+  --icon-shadow: #c9c9cf;
+  --key-slab: #b4b4be;
+  --radius: 12px;
 }
 
+/* Dark follows the system unless the header toggle has pinned a theme. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #17181f;
-    --bg-alt: #1f2029;
-    --text: #f2f2f6;
-    --text-muted: #9497a8;
-    --border: #2b2c37;
-    --danger-bg: #3a1c1c;
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #1b1b21;
+    --bg-alt: #24242c;
+    --ink: #ececf2;
+    --text: #ececf2;
+    --text-muted: #9a9cab;
+    --border: rgba(255, 255, 255, 0.09);
+    --border-strong: rgba(255, 255, 255, 0.16);
+    --hover: rgba(255, 255, 255, 0.07);
+    --accent-ink: var(--accent-1);
+    --accent-soft: color-mix(in srgb, var(--accent-1) 16%, transparent);
+    --danger-bg: #3a1d1d;
     --danger-fg: #fca5a5;
-    --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    --drop: 3px 4px 0 #000000;
+    --route-line: #3a3a46;
+    --icon-shadow: #000000;
+    --key-slab: #44444f;
   }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1b1b21;
+  --bg-alt: #24242c;
+  --ink: #ececf2;
+  --text: #ececf2;
+  --text-muted: #9a9cab;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --hover: rgba(255, 255, 255, 0.07);
+  --accent-ink: var(--accent-1);
+  --accent-soft: color-mix(in srgb, var(--accent-1) 16%, transparent);
+  --danger-bg: #3a1d1d;
+  --danger-fg: #fca5a5;
+  --drop: 3px 4px 0 #000000;
+  --route-line: #3a3a46;
+  --icon-shadow: #000000;
+  --key-slab: #44444f;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
 * {
   box-sizing: border-box;
 }
 
+/* The window fills the popup edge to edge with square corners, framed like
+   the buttons: a thin outer line (the ink showing through the body's
+   padding), a gap, then the thick outline. There is no room for the slab
+   outside the popup edge, so the frame leaves it out. */
+html {
+  background: var(--ink);
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "Nunito", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
   width: 360px;
   margin: 0;
+  padding: 2.75px;
   color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.window {
   background: var(--bg);
+  border: 2px solid var(--ink);
+  box-shadow: 0 0 0 1.5px var(--bg);
+  overflow: hidden;
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+  display: block;
 }
 
 header {
-  position: relative;
-  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
-  color: white;
-  padding: 16px 16px 30px;
+  padding: 12px 12px 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  min-width: 0;
 }
 
 .brand-icon {
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
+  width: 42px;
+  height: 42px;
   display: block;
-  object-fit: cover;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .brand-title {
-  font-size: 13px;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  line-height: 1.1;
+  color: var(--text);
+}
+
+/* A quiet maker's mark under the name. */
+.brand-credit {
+  margin-top: 1px;
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.3px;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 11px;
 }
 
 .route-pill {
-  margin-top: 12px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.16);
-  padding: 5px 11px;
+  background: var(--accent-1);
+  color: var(--on-accent);
+  border: 2px solid var(--ink);
+  box-shadow: var(--drop);
+  padding: 2px 11px;
   border-radius: 20px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 800;
+}
+
+.route-pill[hidden] {
+  display: none;
 }
 
 .job-pill {
-  margin-top: 8px;
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11.5px;
-  color: rgba(255, 255, 255, 0.85);
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 0;
   max-width: 100%;
+}
+
+.job-pill .icon {
+  width: 13px;
+  height: 13px;
+  color: var(--accent-ink);
+}
+
+.job-pill span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.use-saved-link {
-  display: block;
-  text-align: center;
-  margin-top: 4px;
-  font-size: 11.5px;
-  color: var(--text-muted);
-  text-decoration: underline;
-  cursor: pointer;
-  background: none;
-  border: none;
-  padding: 4px;
-  width: 100%;
+.job-pill[hidden] {
+  display: none;
 }
 
-.use-saved-link:hover {
-  color: var(--text);
-}
-
+/* Two right-aligned rows: route controls on top, theme, website and rating below. */
 .actions {
-  position: absolute;
-  top: 12px;
-  right: 12px;
   display: flex;
-  gap: 2px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+  padding: 0 6px 4px 0;
 }
 
-.actions button {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  background: transparent;
-  border: none;
-  color: #fff;
-  opacity: 0.9;
+.actions-row {
+  --cell-gap: 10px;
+  display: flex;
+  gap: var(--cell-gap);
+}
+
+/* Honeycomb: the second row sits half a cell in, nested into the notches
+   of the first. Rows of regular hexagons are (width + gap) × √3/2 apart
+   (the extra 10px cancels the column gap above). */
+.actions-row + .actions-row {
+  margin-top: calc((26px + var(--cell-gap)) * 0.866 - 30px - 10px);
+  margin-right: calc((26px + var(--cell-gap)) / 2);
+}
+
+/* Every control is a tiny copy of the logo's tile: a thick inner outline
+   with a thin second line around it (drawn as a ring so focus outlines
+   still work). A solid offset slab underneath and a soft top-down shade
+   make it read as a raised 3D key that presses down when clicked. */
+.btn,
+.link-out,
+.use-saved-link {
+  --ring: 0 0 0 1.5px var(--bg), 0 0 0 2.75px var(--ink);
+  --face: linear-gradient(180deg, var(--bg) 0%, var(--bg) 45%, var(--bg-alt) 100%);
+  --face-hover: linear-gradient(180deg, var(--bg) 0%, var(--accent-soft) 100%);
+  border: 2px solid var(--ink);
+  background: var(--face);
+  box-shadow: var(--ring), 3px 4px 0 2.75px var(--key-slab);
+  color: var(--ink);
+  font-family: inherit;
   cursor: pointer;
-  font-size: 13px;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s ease;
+}
+
+.btn:hover,
+.link-out:hover,
+.use-saved-link:hover {
+  background: var(--face-hover);
+  transform: translate(-1px, -1px);
+  box-shadow: var(--ring), 4px 5px 0 2.75px var(--key-slab);
+}
+
+.btn:active,
+.link-out:active,
+.use-saved-link:active {
+  transform: translate(3px, 4px);
+  box-shadow: var(--ring);
+}
+
+.btn:focus-visible,
+.link-out:focus-visible,
+.use-saved-link:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 4px;
+}
+
+/* The header keys are the same tile cut as honeycomb cells. clip-path
+   would also cut away borders and shadows, so the tile is rebuilt in
+   layers: ::before is the face (gradient triangles keep the gap around it
+   plain), ::after is both outlines as one hexagon ring cut with evenodd,
+   and a drop-shadow on the button casts the slab in the same shape. The
+   box is 26 × 30 because a regular hexagon is 2/√3 as tall as it is wide;
+   vertical offsets are horizontal ones × 1.155 for the same reason. */
+.actions button {
+  --face: linear-gradient(180deg, var(--bg) 0%, var(--bg) 45%, var(--bg-alt) 100%);
+  --face-hover: linear-gradient(180deg, var(--bg) 0%, var(--accent-soft) 100%);
+  --hex-face: var(--face);
+  --hex-line: var(--ink);
+  --hex-corner: calc(50% - 3px) calc(25% - 1.73px) no-repeat;
+  position: relative;
+  isolation: isolate;
+  width: 26px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: inherit;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s ease, opacity 0.15s ease;
+  filter: drop-shadow(3px 4px 0 var(--key-slab));
+  transition: transform 0.08s ease, filter 0.08s ease;
+}
+
+.actions button::before,
+.actions button::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+}
+
+/* Reaches into the outer line so no seam shows. The face stops on the
+   middle of the thick outline, which hides the triangles' hard edges. */
+.actions button::before {
+  inset: -2.31px -2px;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background:
+    linear-gradient(to top left, transparent 50%, var(--bg) 50%) left 3px top 3.46px / var(--hex-corner),
+    linear-gradient(to top right, transparent 50%, var(--bg) 50%) right 3px top 3.46px / var(--hex-corner),
+    linear-gradient(to bottom left, transparent 50%, var(--bg) 50%) left 3px bottom 3.46px / var(--hex-corner),
+    linear-gradient(to bottom right, transparent 50%, var(--bg) 50%) right 3px bottom 3.46px / var(--hex-corner),
+    var(--hex-face) left 3px top 3.46px / calc(100% - 6px) calc(100% - 6.93px) no-repeat,
+    var(--bg);
+}
+
+/* Four nested hexagons: outer edge, thin line, thick line, face. */
+.actions button::after {
+  inset: -3.18px -2.75px;
+  background: var(--hex-line);
+  clip-path: polygon(evenodd,
+    50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%, 50% 0,
+    50% 1.44px, calc(100% - 1.25px) calc(25% + 0.72px), calc(100% - 1.25px) calc(75% - 0.72px),
+    50% calc(100% - 1.44px), 1.25px calc(75% - 0.72px), 1.25px calc(25% + 0.72px), 50% 1.44px,
+    50% 3.18px, calc(100% - 2.75px) calc(25% + 1.59px), calc(100% - 2.75px) calc(75% - 1.59px),
+    50% calc(100% - 3.18px), 2.75px calc(75% - 1.59px), 2.75px calc(25% + 1.59px), 50% 3.18px,
+    50% 5.49px, calc(100% - 4.75px) calc(25% + 2.74px), calc(100% - 4.75px) calc(75% - 2.74px),
+    50% calc(100% - 5.49px), 4.75px calc(75% - 2.74px), 4.75px calc(25% + 2.74px), 50% 5.49px);
 }
 
 .actions button:hover {
-  background: var(--overlay-hover);
-  opacity: 1;
+  --hex-face: var(--face-hover);
+  transform: translate(-1px, -1px);
+  filter: drop-shadow(4px 5px 0 var(--key-slab));
+}
+
+.actions button:active {
+  transform: translate(3px, 4px);
+  filter: drop-shadow(0 0 0 var(--key-slab));
+}
+
+/* A rectangular outline would look odd around a hexagon (and would cast
+   the slab too), so focus turns the outlines honey, like the text boxes. */
+.actions button:focus-visible {
+  outline: none;
+  --hex-line: var(--accent-ink);
+}
+
+/* Header icons are drawn like the logo: heavy black strokes, yellow fills
+   and the same soft grey drop shadow the pins cast. */
+.actions .icon {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.3;
+  filter: drop-shadow(1.5px 2px 0 var(--icon-shadow));
+  transition: transform 0.1s ease;
+}
+
+.actions .icon .fill {
+  fill: var(--accent-1);
+}
+
+.actions button:active .icon {
+  filter: none;
+}
+
+/* theme.js marks the toggle with the theme in effect; show the other one. */
+#themeToggle .icon-sun,
+#themeToggle[data-mode="dark"] .icon-moon {
+  display: none;
+}
+
+#themeToggle[data-mode="dark"] .icon-sun {
+  display: block;
 }
 
 .sheet {
-  background: var(--bg);
-  border-radius: 18px 18px 0 0;
-  margin-top: -22px;
-  box-shadow: var(--shadow);
-  padding: 16px;
+  padding: 14px;
   min-height: 140px;
   max-height: 440px;
   overflow-y: auto;
@@ -158,12 +412,8 @@ header {
 }
 
 .sheet::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: var(--border-strong);
   border-radius: 4px;
-}
-
-.sheet::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
 }
 
 .state {
@@ -172,35 +422,59 @@ header {
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: 10px;
-  padding: 28px 12px;
+  gap: 8px;
+  padding: 22px 14px;
   color: var(--text-muted);
   font-size: 13px;
 }
 
-.state .state-icon {
-  font-size: 28px;
+.state-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2px;
+}
+
+.state-icon .icon {
+  width: 22px;
+  height: 22px;
 }
 
 .state p {
   margin: 0;
+  line-height: 1.45;
 }
 
 .state strong {
   color: var(--text);
-  font-size: 13.5px;
+  font-size: 14.5px;
+  font-weight: 800;
+}
+
+.state .btn {
+  margin-top: 6px;
 }
 
 .state.error {
   background: var(--danger-bg);
   color: var(--danger-fg);
-  border-radius: 12px;
+  border-radius: var(--radius);
+}
+
+.state.error .state-icon {
+  background: transparent;
+  color: var(--danger-fg);
 }
 
 .spinner {
-  width: 22px;
-  height: 22px;
-  border: 2.5px solid var(--border);
+  width: 24px;
+  height: 24px;
+  border: 2.5px solid var(--border-strong);
   border-top-color: var(--accent-1);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
@@ -213,56 +487,54 @@ header {
 }
 
 .btn {
-  border: none;
-  cursor: pointer;
-  font-size: 12.5px;
-  font-weight: 600;
+  /* Yellow stays yellow, like the logo's bee; the face is shaded lighter
+     at the top and the label is dark so it stays readable. */
+  --face: linear-gradient(180deg, color-mix(in srgb, var(--accent-1) 78%, #fff) 0%, var(--accent-1) 60%);
+  --face-hover: linear-gradient(180deg, color-mix(in srgb, var(--accent-1) 68%, #fff) 0%, color-mix(in srgb, var(--accent-1) 90%, #fff) 60%);
+  color: var(--on-accent);
+  font-size: 13px;
+  font-weight: 800;
   border-radius: 20px;
-  padding: 8px 16px;
-  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
-  color: white;
-  transition: transform 0.1s ease, opacity 0.15s ease;
-}
-
-.btn:hover {
-  opacity: 0.92;
-}
-
-.btn:active {
-  transform: scale(0.97);
+  padding: 6px 16px;
 }
 
 .btn-outline {
-  background: transparent;
-  border: 1.5px solid var(--accent-1);
-  color: var(--accent-1);
+  --face: linear-gradient(180deg, var(--bg) 0%, var(--bg) 45%, var(--bg-alt) 100%);
+  --face-hover: linear-gradient(180deg, var(--bg) 0%, var(--accent-soft) 100%);
+  color: var(--ink);
 }
 
 .summary-card {
-  background: var(--bg-alt);
+  background: var(--bg);
+  border: 2.5px solid var(--ink);
+  border-left: 8px solid var(--accent-1);
   border-radius: 14px;
-  padding: 14px 16px;
-  margin-bottom: 12px;
+  box-shadow: var(--drop);
+  padding: 11px 14px;
+  margin: 0 3px 16px 0;
 }
 
 .summary-time {
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: -0.2px;
+  font-size: 23px;
+  font-weight: 900;
+  letter-spacing: -0.3px;
+  line-height: 1.15;
 }
 
 .summary-meta {
-  margin-top: 3px;
-  font-size: 12px;
+  margin-top: 2px;
+  font-size: 12.5px;
+  font-weight: 600;
   color: var(--text-muted);
 }
 
 .map-frame {
   width: 100%;
   height: 170px;
-  border-radius: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
   overflow: hidden;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .map-frame iframe {
@@ -271,6 +543,7 @@ header {
   display: block;
 }
 
+/* Steps read like the logo's route: a line joining the stops. */
 .steps {
   display: flex;
   flex-direction: column;
@@ -278,15 +551,21 @@ header {
 
 .step {
   display: flex;
-  gap: 10px;
-  padding: 10px 0;
-  border-top: 1px solid var(--border);
+  gap: 11px;
+  padding: 7px 0;
   font-size: 12.5px;
+  position: relative;
 }
 
-.step:first-child {
-  border-top: none;
-  padding-top: 2px;
+.step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 37px;
+  bottom: -7px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--route-line);
 }
 
 .step-icon {
@@ -297,18 +576,23 @@ header {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  color: white;
+  color: #fff;
+}
+
+.step-icon .icon {
+  width: 15px;
+  height: 15px;
 }
 
 .step-body {
   min-width: 0;
+  padding-top: 1px;
 }
 
 .step-body strong {
   display: block;
-  margin-bottom: 2px;
-  font-weight: 600;
+  margin-bottom: 1px;
+  font-weight: 800;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -324,17 +608,83 @@ header {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  margin-top: 14px;
-  padding: 10px;
+  margin: 16px 5px 0 0;
+  padding: 9px;
   border-radius: 12px;
-  background: var(--bg-alt);
-  color: var(--text);
   font-size: 12.5px;
-  font-weight: 600;
+  font-weight: 800;
   text-decoration: none;
-  transition: background 0.15s ease;
 }
 
-.link-out:hover {
-  background: var(--border);
+.link-out .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.use-saved-link {
+  display: block;
+  width: fit-content;
+  margin: 16px auto 8px;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+a.use-saved-link {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+/* Save-job and secondary links under a route, side by side. */
+.route-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px 14px;
+  margin: 16px 5px 8px 0;
+}
+
+.route-actions .use-saved-link {
+  margin: 0;
+}
+
+.save-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.save-pill .icon {
+  width: 13px;
+  height: 13px;
+}
+
+.save-pill.is-saved .icon,
+.save-toggle.is-saved .icon {
+  fill: var(--accent-1);
+  stroke: var(--ink);
+}
+
+.toast {
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: none;
 }

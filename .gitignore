@@ -4,3 +4,6 @@ desktop.ini
 .env
 .env.*
 *.log
+.wrangler/
+.dev.vars
+node_modules/

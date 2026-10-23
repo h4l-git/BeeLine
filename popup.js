@@ -1,39 +1,8 @@
 const contentEl = document.getElementById("content");
 const routeLabelEl = document.getElementById("routeLabel");
+const sitePillEl = document.getElementById("sitePill");
 const jobPillEl = document.getElementById("jobPill");
 const jobPillTextEl = document.getElementById("jobPillText");
-
-const VEHICLE_ICONS = {
-  BUS: "🚌",
-  SUBWAY: "🚇",
-  METRO_RAIL: "🚇",
-  HEAVY_RAIL: "🚆",
-  COMMUTER_TRAIN: "🚆",
-  HIGH_SPEED_TRAIN: "🚄",
-  RAIL: "🚆",
-  TRAM: "🚊",
-  FERRY: "⛴",
-  CABLE_CAR: "🚡",
-  GONDOLA_LIFT: "🚡",
-  FUNICULAR: "🚡",
-  WALK: "🚶",
-};
-
-const VEHICLE_COLORS = {
-  BUS: "#f59e0b",
-  SUBWAY: "#2563eb",
-  METRO_RAIL: "#2563eb",
-  HEAVY_RAIL: "#7c3aed",
-  COMMUTER_TRAIN: "#7c3aed",
-  HIGH_SPEED_TRAIN: "#7c3aed",
-  RAIL: "#7c3aed",
-  TRAM: "#16a34a",
-  FERRY: "#0891b2",
-  CABLE_CAR: "#db2777",
-  GONDOLA_LIFT: "#db2777",
-  FUNICULAR: "#db2777",
-  WALK: "#64748b",
-};
 
 let reversed = false;
 let useSavedInstead = false;
@@ -54,11 +23,56 @@ function getJobForTab(tabId) {
   });
 }
 
+// A location the user clicked on the page (see location-highlighter.js).
+function getPickForTab(tabId) {
+  return new Promise((resolve) => {
+    if (tabId === undefined) return resolve(null);
+    const key = `pick_${tabId}`;
+    chrome.storage.session.get([key], (data) => resolve(data[key] || null));
+  });
+}
+
+// Routes to the clicked location, keeping the job's title and link so the
+// history entry still says which job it was for.
+function jobFromPick(pick, job) {
+  return {
+    status: "resolved",
+    addresses: [pick.place],
+    title: (job && job.title) || pick.title || "Job posting",
+    company: (job && job.company) || pick.company || null,
+    url: (job && job.url) || pick.url || null,
+    pickLabel: pick.label,
+  };
+}
+
+// Turns a job URL into its site name, e.g. "https://uk.indeed.com/viewjob" → "indeed.com".
+function siteName(url) {
+  try {
+    const parts = new URL(url).hostname.split(".");
+    // Keep three parts for domains like "reed.co.uk".
+    const keep = parts.length > 2 && /^(co|com|org|net|ac|gov)$/.test(parts[parts.length - 2]) ? 3 : 2;
+    return parts.slice(-keep).join(".");
+  } catch {
+    return null;
+  }
+}
+
+function showSitePill(job) {
+  const name = job && job.url ? siteName(job.url) : null;
+  sitePillEl.hidden = !name;
+  sitePillEl.textContent = name || "";
+}
+
+// Keeps a long street address from stretching the route pill.
+function shortLabel(text, max = 26) {
+  return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
+}
+
 async function askAiForLocation(aiApiKey, jobText) {
-  const prompt = `You are extracting workplace location(s) from a job advertisement. Read the job posting text below and identify the physical work location(s) mentioned — a full street address where given, otherwise the most specific city/area mentioned. Some postings list more than one possible location (e.g. "based in London, Manchester, or remote from our Bristol office") — list every distinct one mentioned. If no location is mentioned anywhere, say so.
+  const prompt = `You are extracting workplace location(s) from a job advertisement. Read the job posting text below and identify the physical work location(s) mentioned — a full street address where given, otherwise the most specific city/area mentioned. Some postings list more than one possible location (e.g. "based in London, Manchester, or remote from our Bristol office") — list every distinct one mentioned. If no location is mentioned anywhere, say so. Also give the job's title and the name of the hiring company, as written in the posting.
 
 Respond with ONLY a JSON object and nothing else, in this exact shape:
-{"addresses": ["<location string>", ...] or [], "confidence": "high" | "medium" | "low"}
+{"addresses": ["<location string>", ...] or [], "title": "<job title>" or null, "company": "<company name>" or null, "confidence": "high" | "medium" | "low"}
 
 Job posting text:
 """
@@ -121,7 +135,7 @@ function setState({ spinner, icon, title, description, action }, variant) {
   } else if (icon) {
     const iconEl = document.createElement("div");
     iconEl.className = "state-icon";
-    iconEl.textContent = icon;
+    iconEl.innerHTML = svgIcon(icon);
     state.appendChild(iconEl);
   }
   if (title) {
@@ -153,42 +167,182 @@ function openOptions() {
   window.location.href = "options.html";
 }
 
+const WEBSITE_URL = "https://h4l-git.github.io/BeeLine/";
+
+document.getElementById("website").addEventListener("click", () => {
+  chrome.tabs.create({ url: WEBSITE_URL });
+});
+
+// Opens this extension's own Web Store reviews page; the installed ID matches the listing.
+document.getElementById("rate").addEventListener("click", () => {
+  chrome.tabs.create({ url: `https://chromewebstore.google.com/detail/${chrome.runtime.id}/reviews` });
+});
 document.getElementById("settings").addEventListener("click", openOptions);
+document.getElementById("history").addEventListener("click", () => {
+  window.location.href = "history.html";
+});
 document.getElementById("refresh").addEventListener("click", () => load());
 document.getElementById("swap").addEventListener("click", () => {
   reversed = !reversed;
   load();
 });
 
-function directionsUrl(origin, destination) {
-  const params = new URLSearchParams({
-    api: "1",
-    origin,
-    destination,
-    travelmode: "transit",
+// Same request the proxy makes (proxy/worker.js), for users with their own
+// key. Only what we draw is requested, which keeps calls on the Compute
+// Routes Essentials SKU.
+const ROUTE_FIELDS = [
+  "routes.legs.distanceMeters",
+  "routes.legs.duration",
+  "routes.legs.localizedValues",
+  "routes.legs.steps.travelMode",
+  "routes.legs.steps.staticDuration",
+  "routes.legs.steps.distanceMeters",
+  "routes.legs.steps.transitDetails",
+  "routes.legs.stepsOverview",
+].join(",");
+
+// Saved homes can be raw "lat,lng" coordinates, which the Routes API wants
+// as a location rather than an address.
+function waypoint(place) {
+  const compact = place.replace(/\s+/g, "");
+  if (/^-?\d{1,2}(\.\d+)?,-?\d{1,3}(\.\d+)?$/.test(compact)) {
+    const [latitude, longitude] = compact.split(",").map(Number);
+    return { location: { latLng: { latitude, longitude } } };
+  }
+  return { address: place };
+}
+
+async function fetchRoutesApi(apiKey, origin, destination) {
+  // Without a key of their own, lookups go through BeeLine's proxy, which
+  // adds the shared key on the server and enforces the daily limits.
+  if (!apiKey) return callProxy("route", { origin, destination });
+
+  const res = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-goog-api-key": apiKey,
+      "x-goog-fieldmask": ROUTE_FIELDS,
+    },
+    body: JSON.stringify({
+      origin: waypoint(origin),
+      destination: waypoint(destination),
+      travelMode: "TRANSIT",
+    }),
   });
-  return `https://www.google.com/maps/dir/?${params.toString()}`;
+  let data = null;
+  try {
+    data = await res.json();
+  } catch (e) {
+    // ignore
+  }
+  if (!res.ok) {
+    throw new Error(
+      (data && data.error && data.error.message) || `Routes request failed (HTTP ${res.status})`
+    );
+  }
+  return data || {};
+}
+
+// Routes API durations are strings like "754s".
+function seconds(duration) {
+  return parseFloat(duration) || 0;
+}
+
+function formatDuration(totalSeconds) {
+  const mins = Math.max(1, Math.round(totalSeconds / 60));
+  if (mins < 60) return `${mins} min${mins === 1 ? "" : "s"}`;
+  const hours = Math.floor(mins / 60);
+  const rest = mins % 60;
+  return `${hours} hour${hours === 1 ? "" : "s"}${rest ? ` ${rest} min${rest === 1 ? "" : "s"}` : ""}`;
+}
+
+function formatClock(date, timeZone) {
+  try {
+    return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit", timeZone }).format(date);
+  } catch (e) {
+    return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(date);
+  }
+}
+
+// The Routes API splits each walk into turn-by-turn steps. Its
+// multi-modal segments group those back into one "walk" or "ride" each,
+// which is what the popup lists.
+function toLeg(apiLeg) {
+  const steps = apiLeg.steps || [];
+  const segments =
+    (apiLeg.stepsOverview && apiLeg.stepsOverview.multiModalSegments) ||
+    steps.map((step, i) => ({ travelMode: step.travelMode, stepStartIndex: i, stepEndIndex: i }));
+
+  const parts = segments.map((segment) => {
+    // Zero-valued indexes are left out of the JSON.
+    const start = segment.stepStartIndex || 0;
+    const end = segment.stepEndIndex === undefined ? start : segment.stepEndIndex;
+    const group = steps.slice(start, end + 1);
+    const secs = group.reduce((sum, step) => sum + seconds(step.staticDuration), 0);
+    const ride = group.find((step) => step.transitDetails);
+
+    if (segment.travelMode === "TRANSIT" && ride) {
+      const td = ride.transitDetails;
+      const line = td.transitLine || {};
+      const stops = td.stopDetails || {};
+      const times = td.localizedValues || {};
+      return {
+        mode: "TRANSIT",
+        vehicle: (line.vehicle && line.vehicle.type) || "BUS",
+        line: line.nameShort || line.name || "Transit",
+        headsign: td.headsign || "",
+        from: (stops.departureStop && stops.departureStop.name) || "",
+        to: (stops.arrivalStop && stops.arrivalStop.name) || "",
+        stops: td.stopCount || 0,
+        departsAt: stops.departureTime ? new Date(stops.departureTime) : null,
+        arrivesAt: stops.arrivalTime ? new Date(stops.arrivalTime) : null,
+        departZone: times.departureTime && times.departureTime.timeZone,
+        arriveZone: times.arrivalTime && times.arrivalTime.timeZone,
+        secs,
+        duration: formatDuration(secs),
+      };
+    }
+    return {
+      mode: "WALK",
+      instructions: (segment.navigationInstruction && segment.navigationInstruction.instructions) || "",
+      secs,
+      duration: formatDuration(secs),
+    };
+  });
+
+  // Departure and arrival include the walks either side of the rides.
+  const rides = parts.filter((part) => part.mode === "TRANSIT");
+  const first = rides[0];
+  const last = rides[rides.length - 1];
+  let departure = null;
+  let arrival = null;
+  if (first && first.departsAt && last.arrivesAt) {
+    const walkBefore = parts.slice(0, parts.indexOf(first)).reduce((sum, p) => sum + p.secs, 0);
+    const walkAfter = parts.slice(parts.indexOf(last) + 1).reduce((sum, p) => sum + p.secs, 0);
+    departure = formatClock(new Date(first.departsAt - walkBefore * 1000), first.departZone);
+    arrival = formatClock(new Date(last.arrivesAt.getTime() + walkAfter * 1000), last.arriveZone);
+  }
+
+  const text = apiLeg.localizedValues || {};
+  const distanceMeters = apiLeg.distanceMeters || 0;
+  return {
+    duration: (text.duration && text.duration.text) || formatDuration(seconds(apiLeg.duration)),
+    distance: (text.distance && text.distance.text) || `${(distanceMeters / 1000).toFixed(1)} km`,
+    distanceMeters,
+    departure,
+    arrival,
+    parts,
+  };
 }
 
 async function fetchRoute(apiKey, origin, destination) {
-  const params = new URLSearchParams({
-    origin,
-    destination,
-    mode: "transit",
-    departure_time: "now",
-    key: apiKey,
-  });
-  const res = await fetch(
-    `https://maps.googleapis.com/maps/api/directions/json?${params.toString()}`
-  );
-  if (!res.ok) {
-    throw new Error(`Directions request failed (HTTP ${res.status})`);
+  const data = await fetchRoutesApi(apiKey, origin, destination);
+  const route = data.routes && data.routes[0];
+  if (!route || !route.legs || !route.legs.length) {
+    throw new Error("No transit route found between these places.");
   }
-  const data = await res.json();
-  if (data.status !== "OK") {
-    throw new Error(data.error_message || `Directions API status: ${data.status}`);
-  }
-  return data;
+  return toLeg(route.legs[0]);
 }
 
 function swapForDirection(reversed, home, other) {
@@ -197,14 +351,18 @@ function swapForDirection(reversed, home, other) {
 
 // A job can list several candidate work locations. Route to each from home
 // and keep whichever comes back with the shortest travel distance, so we
-// only ever end up rendering one final route.
+// only ever end up rendering one final route. Each candidate costs a lookup,
+// so on the shared service only the first few are tried.
+const MAX_SHARED_CANDIDATES = 3;
+
 async function resolveClosestRoute(apiKey, home, addresses, reversed) {
+  const candidates = apiKey ? addresses : addresses.slice(0, MAX_SHARED_CANDIDATES);
   const attempts = await Promise.all(
-    addresses.map(async (addr) => {
+    candidates.map(async (addr) => {
       const [origin, destination] = swapForDirection(reversed, home, addr);
       try {
         const result = await fetchRoute(apiKey, origin, destination);
-        return { result, origin, destination, distance: result.routes[0].legs[0].distance.value };
+        return { result, origin, destination, distance: result.distanceMeters };
       } catch (e) {
         return { error: e };
       }
@@ -213,129 +371,35 @@ async function resolveClosestRoute(apiKey, home, addresses, reversed) {
 
   const valid = attempts.filter((a) => !a.error);
   if (!valid.length) {
-    // With just one candidate, surface its actual error instead of the
-    // generic multi-location message.
-    throw addresses.length === 1
-      ? attempts[0].error
+    // With just one candidate, or when the daily limit is what stopped
+    // them, surface the actual error instead of the generic message.
+    throw candidates.length === 1 || attempts.some((a) => a.error.limited)
+      ? attempts.find((a) => a.error.limited) || attempts[0].error
       : new Error("Couldn't find a route to any of the listed locations.");
   }
   valid.sort((a, b) => a.distance - b.distance);
   return valid[0];
 }
 
-function renderStep(step) {
-  const isTransit = step.travel_mode === "TRANSIT";
-  const wrap = document.createElement("div");
-  wrap.className = "step";
-
-  const icon = document.createElement("div");
-  icon.className = "step-icon";
-  const body = document.createElement("div");
-  body.className = "step-body";
-
-  const vehicleType = isTransit
-    ? step.transit_details.line.vehicle
-      ? step.transit_details.line.vehicle.type
-      : "BUS"
-    : "WALK";
-  icon.textContent = VEHICLE_ICONS[vehicleType] || "🚌";
-  icon.style.background = VEHICLE_COLORS[vehicleType] || "#64748b";
-
-  if (isTransit) {
-    const td = step.transit_details;
-    const lineName = td.line.short_name || td.line.name;
-    const strong = document.createElement("strong");
-    strong.textContent = `${lineName}${td.headsign ? " → " + td.headsign : ""}`;
-    const meta = document.createElement("div");
-    meta.className = "step-meta";
-    meta.textContent = `${td.departure_stop.name} → ${td.arrival_stop.name} · ${step.duration.text} (${td.num_stops} stop${td.num_stops === 1 ? "" : "s"})`;
-    body.appendChild(strong);
-    body.appendChild(meta);
-  } else {
-    const strong = document.createElement("strong");
-    strong.textContent = "Walk";
-    const meta = document.createElement("div");
-    meta.className = "step-meta";
-    meta.textContent = `${step.html_instructions.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()} · ${step.duration.text}`;
-    body.appendChild(strong);
-    body.appendChild(meta);
-  }
-
-  wrap.appendChild(icon);
-  wrap.appendChild(body);
-  return wrap;
-}
-
-function embedMapUrl(apiKey, origin, destination) {
-  const params = new URLSearchParams({
-    key: apiKey,
-    origin,
-    destination,
-    mode: "transit",
-  });
-  return `https://www.google.com/maps/embed/v1/directions?${params.toString()}`;
-}
-
-function render(data, origin, destination, jobActive, apiKey) {
+function render(leg, origin, destination, jobActive, apiKey) {
   contentEl.innerHTML = "";
-  const leg = data.routes[0].legs[0];
+  renderRoute(contentEl, leg, origin, destination, apiKey);
 
-  const summaryCard = document.createElement("div");
-  summaryCard.className = "summary-card";
+  if (!jobActive) return null;
 
-  const time = document.createElement("div");
-  time.className = "summary-time";
-  time.textContent = `${leg.duration.text}`;
-
-  const meta = document.createElement("div");
-  meta.className = "summary-meta";
-  const arrival = leg.arrival_time ? leg.arrival_time.text : null;
-  const departure = leg.departure_time ? leg.departure_time.text : null;
-  meta.textContent =
-    departure && arrival
-      ? `Depart ${departure} · Arrive ${arrival}`
-      : leg.distance.text;
-
-  summaryCard.appendChild(time);
-  summaryCard.appendChild(meta);
-  contentEl.appendChild(summaryCard);
-
-  if (jobActive) {
-    const mapWrap = document.createElement("div");
-    mapWrap.className = "map-frame";
-    const iframe = document.createElement("iframe");
-    iframe.src = embedMapUrl(apiKey, origin, destination);
-    iframe.width = "100%";
-    iframe.height = "170";
-    iframe.style.border = "0";
-    iframe.loading = "lazy";
-    iframe.referrerPolicy = "no-referrer";
-    mapWrap.appendChild(iframe);
-    contentEl.appendChild(mapWrap);
-  }
-
-  const steps = document.createElement("div");
-  steps.className = "steps";
-  leg.steps.forEach((step) => steps.appendChild(renderStep(step)));
-  contentEl.appendChild(steps);
-
-  const link = document.createElement("a");
-  link.className = "link-out";
-  link.href = directionsUrl(origin, destination);
-  link.target = "_blank";
-  link.textContent = "Open full route in Google Maps →";
-  contentEl.appendChild(link);
-
-  if (jobActive) {
-    const useSaved = document.createElement("button");
-    useSaved.className = "use-saved-link";
-    useSaved.textContent = "Use my saved work address instead";
-    useSaved.addEventListener("click", () => {
-      useSavedInstead = true;
-      load();
-    });
-    contentEl.appendChild(useSaved);
-  }
+  // The save-job button joins this row once the route is in history.
+  const actions = document.createElement("div");
+  actions.className = "route-actions";
+  const useSaved = document.createElement("button");
+  useSaved.className = "use-saved-link";
+  useSaved.textContent = "Use my saved work address instead";
+  useSaved.addEventListener("click", () => {
+    useSavedInstead = true;
+    load();
+  });
+  actions.appendChild(useSaved);
+  contentEl.appendChild(actions);
+  return actions;
 }
 
 async function runAi(tabId, job, aiApiKey) {
@@ -345,7 +409,7 @@ async function runAi(tabId, job, aiApiKey) {
     const addresses = (result && result.addresses) || [];
     if (!addresses.length) {
       setState({
-        icon: "🤷",
+        icon: "searchX",
         title: "AI couldn't find a location either",
         description: "This posting doesn't seem to mention a specific workplace location.",
       });
@@ -353,12 +417,19 @@ async function runAi(tabId, job, aiApiKey) {
     }
     chrome.storage.session.set(
       {
-        [`job_${tabId}`]: { status: "resolved", addresses, title: job.title, company: null },
+        [`job_${tabId}`]: {
+          status: "resolved",
+          addresses,
+          // The job card's name (read on the page) beats the AI's reading.
+          title: job.title || result.title || "Job posting",
+          company: job.company || result.company || null,
+          url: job.url,
+        },
       },
       () => load()
     );
   } catch (err) {
-    setState({ icon: "⚠️", title: "AI lookup failed", description: err.message }, "error");
+    setState({ icon: "alert", title: "AI lookup failed", description: err.message }, "error");
   }
 }
 
@@ -370,24 +441,29 @@ function getSyncSettings() {
 
 async function load() {
   jobPillEl.hidden = true;
+  sitePillEl.hidden = true;
 
   const [data, tabId] = await Promise.all([getSyncSettings(), getActiveTabId()]);
 
-  if (!data.apiKey || !data.home) {
+  if (!data.home) {
     routeLabelEl.textContent = "Set up required";
     setState({
-      icon: "🏠",
+      icon: "home",
       title: "Set up your commute",
-      description: "Add your API key, home, and work address to get started.",
+      description: "Add your home and work address to get started.",
       action: { label: "Open settings", onClick: openOptions },
     });
     return;
   }
 
-  const job = useSavedInstead ? null : await getJobForTab(tabId);
+  const [detectedJob, pick] = useSavedInstead
+    ? [null, null]
+    : await Promise.all([getJobForTab(tabId), getPickForTab(tabId)]);
+  const job = pick ? jobFromPick(pick, detectedJob) : detectedJob;
 
   if (job && job.addresses && job.addresses.length) {
-    routeLabelEl.textContent = reversed ? "Job → Home" : "Home → Job";
+    const place = job.pickLabel ? shortLabel(job.pickLabel) : "Job";
+    routeLabelEl.textContent = reversed ? `${place} → Home` : `Home → ${place}`;
     jobPillEl.hidden = false;
     jobPillTextEl.textContent = job.company ? `${job.title} at ${job.company}` : job.title;
 
@@ -399,15 +475,31 @@ async function load() {
         job.addresses,
         reversed
       );
-      render(result, origin, destination, true, data.apiKey);
+      const actions = render(result, origin, destination, true, data.apiKey);
+      saveToHistory({
+        job,
+        origin,
+        destination,
+        jobPlace: reversed ? origin : destination,
+        label: routeLabelEl.textContent,
+        leg: result,
+      })
+        .then((entry) => {
+          // Skip if the view changed (swap, refresh) while saving.
+          if (actions.isConnected) actions.prepend(makeSaveButton(entry));
+        })
+        .catch(() => {
+          // History is a convenience; never let it break the route view.
+        });
     } catch (err) {
-      setState({ icon: "⚠️", title: "Couldn't load route", description: err.message }, "error");
+      setState({ icon: "alert", title: "Couldn't load route", description: err.message }, "error");
     }
     return;
   }
 
   if (job && job.status === "unresolved") {
     routeLabelEl.textContent = "Job detected";
+    showSitePill(job);
     jobPillEl.hidden = false;
     jobPillTextEl.textContent = job.title || "Job posting";
 
@@ -418,14 +510,14 @@ async function load() {
       ? { label: "Use AI", className: "btn btn-outline", onClick: () => runAi(tabId, job, data.aiApiKey) }
       : { label: "Open settings", onClick: openOptions };
 
-    setState({ icon: "🤖", title: "No address found automatically", description, action });
+    setState({ icon: "sparkles", title: "No address found automatically", description, action });
     return;
   }
 
   if (!data.work) {
     routeLabelEl.textContent = "Ready when you are";
     setState({
-      icon: "💼",
+      icon: "briefcase",
       title: "Nothing to route to yet",
       description:
         "Visit a job listing to see its commute, or add a work address in settings to check your regular commute anytime.",
@@ -442,7 +534,7 @@ async function load() {
     const result = await fetchRoute(data.apiKey, origin, destination);
     render(result, origin, destination, false, data.apiKey);
   } catch (err) {
-    setState({ icon: "⚠️", title: "Couldn't load route", description: err.message }, "error");
+    setState({ icon: "alert", title: "Couldn't load route", description: err.message }, "error");
   }
 }
 

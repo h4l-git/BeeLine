@@ -2,74 +2,136 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Commute — Settings</title>
+  <title>BeeLine — Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="popup.css" />
   <link rel="stylesheet" href="options.css" />
+  <script src="palettes.js"></script>
+  <script src="theme.js"></script>
 </head>
 <body>
-  <header>
-    <div class="actions">
-      <button id="back" title="Back">←</button>
-    </div>
-    <div class="brand">
-      <img class="brand-icon" src="icons/icon48.png" alt="" />
-      <div class="brand-title">Commute</div>
-    </div>
-    <div class="route-pill">Settings</div>
-  </header>
-
-  <div class="sheet">
-    <div class="field">
-      <div class="field-label-row">
-        <label for="apiKey">Google Maps API key</label>
-        <a
-          class="get-key"
-          href="https://console.cloud.google.com/google/maps-apis/credentials"
-          target="_blank"
-          rel="noopener noreferrer"
-        >Get API key</a>
+  <div class="window">
+    <header>
+      <div class="header-row">
+        <div class="brand">
+          <img class="brand-icon" src="icons/icon128.png" alt="" />
+          <div class="brand-text">
+            <div class="brand-title">BeeLine</div>
+            <div class="brand-credit">By h4l.dev</div>
+          </div>
+        </div>
+        <div class="actions">
+          <div class="actions-row">
+            <button id="back" title="Back">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M20 12H9"/><path class="fill" d="M10 5.5 3.5 12l6.5 6.5Z"/></svg>
+            </button>
+          </div>
+          <div class="actions-row">
+            <button id="themeToggle" title="Toggle light/dark mode">
+              <svg class="icon icon-moon" viewBox="0 0 24 24"><path class="fill" d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+              <svg class="icon icon-sun" viewBox="0 0 24 24"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/><circle class="fill" cx="12" cy="12" r="4.5"/></svg>
+            </button>
+            <button id="website" title="BeeLine website">
+              <svg class="icon" viewBox="0 0 24 24"><circle class="fill" cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.6 3.9 5.8 3.9 9.5s-1.3 6.9-3.9 9.5c-2.6-2.6-3.9-5.8-3.9-9.5S9.4 5.1 12 2.5Z"/></svg>
+            </button>
+            <button id="rate" title="Rate BeeLine">
+              <svg class="icon" viewBox="0 0 24 24"><path class="fill" d="M12 2.8l2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3-4.6-4.4 6.3-.9Z"/></svg>
+            </button>
+          </div>
+        </div>
       </div>
-      <input id="apiKey" type="text" placeholder="AIza…" autocomplete="off" />
-      <p class="hint">
-        Needs the <strong>Directions API</strong> enabled on a Google Cloud project.
-        Restrict the key by API, not by HTTP referrer — extension popups don't send one.
-      </p>
-    </div>
-
-    <div class="field">
-      <div class="field-label-row">
-        <label for="aiApiKey">🤖 Anthropic API key (optional)</label>
-        <a
-          class="get-key"
-          href="https://console.anthropic.com/settings/keys"
-          target="_blank"
-          rel="noopener noreferrer"
-        >Get API key</a>
+      <div class="pills">
+        <div class="route-pill">Settings</div>
       </div>
-      <input id="aiApiKey" type="text" placeholder="sk-ant-…" autocomplete="off" />
-      <p class="hint">
-        Only used when you explicitly click "Use AI" on a job page where no address
-        could be found automatically. Each use is a small billed API call on your
-        Anthropic account — nothing runs without you asking for it.
-      </p>
-    </div>
+    </header>
 
-    <div class="field">
-      <label for="home">🏠 Home address</label>
-      <input id="home" type="text" placeholder="123 Home St, City" />
-    </div>
+    <div class="sheet">
+      <div class="field">
+        <div class="field-label-row">
+          <label for="apiKey">Google Maps API key (optional)</label>
+          <a
+            class="get-key"
+            href="https://console.cloud.google.com/google/maps-apis/credentials"
+            target="_blank"
+            rel="noopener noreferrer"
+          >Get API key</a>
+        </div>
+        <input id="apiKey" type="text" placeholder="AIza…" autocomplete="off" />
+        <p class="free-quota">Without a key you get <strong>100 free route lookups a day</strong>, reset at midnight UTC.</p>
+        <p class="hint">
+          Leave blank to use BeeLine's free shared lookups.
+          Add your own key, with the <strong>Routes API</strong> enabled, for unlimited use.
+          Restrict it by API, not by HTTP referrer — extension popups don't send one.
+        </p>
+      </div>
 
-    <div class="field">
-      <label for="work">💼 Current work address</label>
-      <input id="work" type="text" placeholder="456 Work Ave, City" />
-    </div>
+      <div class="field">
+        <div class="field-label-row">
+          <label for="aiApiKey">Anthropic API key (optional)</label>
+          <a
+            class="get-key"
+            href="https://console.anthropic.com/settings/keys"
+            target="_blank"
+            rel="noopener noreferrer"
+          >Get API key</a>
+        </div>
+        <input id="aiApiKey" type="text" placeholder="sk-ant-…" autocomplete="off" />
+        <p class="hint">
+          Only used when you explicitly click "Use AI" on a job page where no address
+          could be found automatically. Each use is a small billed API call on your
+          Anthropic account — nothing runs without you asking for it.
+        </p>
+      </div>
 
-    <div class="footer">
-      <button id="save" class="btn">Save changes</button>
-      <span id="status"></span>
+      <div class="field">
+        <label for="home">Home address</label>
+        <div class="input-row">
+          <input id="home" type="text" placeholder="123 Home St, City" />
+          <button
+            id="useLocation"
+            class="btn btn-outline icon-btn"
+            type="button"
+            title="Use my current location"
+            aria-label="Use my current location"
+          >
+            <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle class="fill" cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+          </button>
+        </div>
+        <p class="hint" id="locationStatus" hidden></p>
+      </div>
+
+      <div class="field">
+        <label for="work">Current work address</label>
+        <input id="work" type="text" placeholder="456 Work Ave, City" />
+      </div>
+
+      <div class="field">
+        <div class="toggle-row">
+          <label for="highlightPostcodes">Highlight locations on job pages</label>
+          <input id="highlightPostcodes" class="switch" type="checkbox" role="switch" checked />
+        </div>
+        <p class="hint">Postcodes, addresses, towns and cities on job listings. Click one to see the route to it.</p>
+      </div>
+
+      <div class="field">
+        <div class="field-label-row">
+          <label id="paletteLabel">Colour theme</label>
+          <span id="paletteName" class="palette-name"></span>
+        </div>
+        <div id="palettePicker" class="palette-picker" role="radiogroup" aria-labelledby="paletteLabel"></div>
+        <p class="hint">Changes BeeLine's accent colour everywhere, including location highlights. Switch light or dark mode with the sun/moon key above.</p>
+      </div>
+
+      <div class="footer">
+        <button id="save" class="btn">Save changes</button>
+        <span id="status"></span>
+      </div>
     </div>
   </div>
 
+  <script src="proxy.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

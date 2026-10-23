@@ -76,32 +76,34 @@
       Back to BeeLine
     </a>
     <h1>Privacy Policy</h1>
-    <p class="updated"><span class="pill">Last updated: 18 September 2026</span></p>
+    <p class="updated"><span class="pill">Last updated: 16 October 2026</span></p>
 
     <p>BeeLine is a Chrome extension that shows transit routes, connections, and travel time from your home to your work - or to a job listing you’re viewing. This page explains what data BeeLine accesses, stores, and sends, and why.</p>
 
     <h2>What BeeLine accesses</h2>
     <ul>
-      <li><strong>Your saved addresses and API keys</strong>, which you enter in Settings. These are used to request a transit route and, if you choose, to ask AI to find a workplace location.</li>
+      <li><strong>Your saved addresses and any API keys you add</strong>, which you enter in Settings. These are used to request a transit route and, if you choose, to ask AI to find a workplace location.</li>
       <li><strong>Job listing pages</strong> on supported boards (including LinkedIn, Indeed, Glassdoor, ZipRecruiter, Reed, Totaljobs, Monster, and CV-Library). On those sites, BeeLine looks for a workplace address in structured job data (and, on LinkedIn, in visible page text) so it can show the commute to that job.</li>
       <li><strong>Page text, only if you click “Use AI”.</strong> If no address can be found automatically, BeeLine may offer to send a short excerpt of the posting to Anthropic. That only happens after you click the button - it is never sent in the background.</li>
     </ul>
 
     <h2>What BeeLine stores</h2>
-    <p>BeeLine stores the following on your device using Chrome’s <code>storage</code> API. None of this is sent to any server we control:</p>
+    <p>BeeLine stores the following on your device using Chrome’s <code>storage</code> API:</p>
     <ul>
-      <li>Your Google Maps API key</li>
+      <li>Your Google Maps API key, if you choose to add one</li>
       <li>Your Anthropic API key, if you choose to add one</li>
       <li>Your home address</li>
       <li>Your work address, if you add one</li>
+      <li>A random install ID, generated on your device and not linked to you, used only to count your daily free route lookups</li>
       <li>A short-lived, in-session record of a detected job on the current tab (title, company, and address, or unresolved page text), cleared when the tab is closed or reloaded</li>
     </ul>
     <p>Settings are stored with Chrome sync so they can follow your signed-in Chrome profile. Job detections stay in session storage only.</p>
 
     <h2>What BeeLine sends, and to whom</h2>
-    <p>BeeLine does not operate its own backend. Requests go only to services you configure, and only as needed to show a route:</p>
+    <p>Requests are only made as needed to show a route:</p>
     <ul>
-      <li><strong>Google Maps Directions API</strong> (<code>maps.googleapis.com</code>) - when you open the popup to see a commute, BeeLine sends your origin and destination (home, work, or a detected job address) with your API key to fetch transit directions. The same origin and destination may be loaded in a Maps embed so you can see the route.</li>
+      <li><strong>BeeLine route service</strong> - if you haven't added your own Google Maps key, BeeLine sends your origin and destination (home, work, or a detected job address), or your coordinates when you click “Use my current location”, to a small BeeLine service hosted on Cloudflare. It forwards the request to Google Maps with BeeLine’s key and returns the result. To enforce daily limits it counts lookups against your random install ID and a one-way hash of your IP address. These counts are deleted every day. Addresses and coordinates are not stored.</li>
+      <li><strong>Google Maps Routes and Geocoding APIs</strong> (<code>routes.googleapis.com</code>, <code>maps.googleapis.com</code>) - if you have added your own key, BeeLine sends your origin and destination (or coordinates) directly to Google with your key. The same origin and destination may be loaded in a Maps embed so you can see the route.</li>
       <li><strong>Anthropic API</strong> (<code>api.anthropic.com</code>) - only if you have added an Anthropic key and you click “Use AI” on a job page where no address was found. BeeLine then sends a truncated excerpt of the posting (up to 6,000 characters) so the model can look for a workplace location. Your browsing history is not sent.</li>
       <li><strong>Google Maps</strong> (in the browser) - if you click through to open the full directions, Chrome navigates to Google Maps with the same origin and destination.</li>
     </ul>
@@ -110,7 +112,7 @@
     <h2>Permissions</h2>
     <ul>
       <li><code>storage</code> - lets BeeLine save your settings and the in-session job detection described above.</li>
-      <li>Access to <code>maps.googleapis.com</code> - lets BeeLine fetch transit directions and show a map embed with your own Google Maps API key.</li>
+      <li>Access to <code>routes.googleapis.com</code> and <code>maps.googleapis.com</code> - lets BeeLine fetch transit directions and look up your location with your own Google Maps API key, if you add one.</li>
       <li>Access to <code>api.anthropic.com</code> - lets BeeLine call Anthropic only when you click “Use AI”.</li>
       <li>Content scripts on supported job sites - let BeeLine read workplace details from a listing so the popup can show that commute.</li>
     </ul>
