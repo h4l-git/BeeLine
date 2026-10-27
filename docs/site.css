@@ -19,6 +19,9 @@
   --route-line: #d4d4dc;
   --icon-shadow: #c9c9cf;
   --key-slab: #b4b4be;
+  /* Honeycomb lines behind the page: a faint wash of the accent. */
+  --hive-line: color-mix(in srgb, var(--accent-ink) 13%, transparent);
+  --hive-tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='45' viewBox='0 0 26 45'%3E%3Cpath d='M0 7.5 13 0l13 7.5v15L13 30 0 22.5zM13 30v15' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E");
   --radius: 12px;
 }
 
@@ -39,6 +42,7 @@
     --route-line: #3a3a46;
     --icon-shadow: #000000;
     --key-slab: #44444f;
+    --hive-line: color-mix(in srgb, var(--accent-ink) 8%, transparent);
   }
 }
 
@@ -57,6 +61,7 @@
   --route-line: #3a3a46;
   --icon-shadow: #000000;
   --key-slab: #44444f;
+  --hive-line: color-mix(in srgb, var(--accent-ink) 8%, transparent);
 }
 
 :root[data-theme="light"] {
@@ -76,10 +81,24 @@ html {
 body {
   font-family: "Nunito", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
   background: var(--bg);
+  position: relative;
+  min-height: 100vh;
   color: var(--text);
   font-size: 16px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+}
+
+/* The hive pattern scrolls with the page, under all content. */
+body::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--hive-line);
+  -webkit-mask: var(--hive-tile) 0 0 / 26px 45px repeat;
+  mask: var(--hive-tile) 0 0 / 26px 45px repeat;
 }
 
 a {

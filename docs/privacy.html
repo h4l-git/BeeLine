@@ -65,6 +65,7 @@
           <svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path class="fill" d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
           <svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/><circle class="fill" cx="12" cy="12" r="4.5"/></svg>
         </button>
+        <a href="https://www.notion.so/3e32d11332858029bc5dc0cc7bfa6481" class="btn btn-sm btn-outline"><span class="label-full">Documentation</span><span class="label-short">Docs</span></a>
         <a href="https://chromewebstore.google.com/detail/beeline/YOUR_EXTENSION_ID" class="btn btn-sm"><span class="label-full">Add to Chrome</span><span class="label-short">Install</span></a>
       </div>
     </div>
@@ -76,7 +77,7 @@
       Back to BeeLine
     </a>
     <h1>Privacy Policy</h1>
-    <p class="updated"><span class="pill">Last updated: 16 October 2026</span></p>
+    <p class="updated"><span class="pill">Last updated: 27 October 2026</span></p>
 
     <p>BeeLine is a Chrome extension that shows transit routes, connections, and travel time from your home to your work - or to a job listing you’re viewing. This page explains what data BeeLine accesses, stores, and sends, and why.</p>
 
@@ -84,6 +85,7 @@
     <ul>
       <li><strong>Your saved addresses and any API keys you add</strong>, which you enter in Settings. These are used to request a transit route and, if you choose, to ask AI to find a workplace location.</li>
       <li><strong>Job listing pages</strong> on supported boards (including LinkedIn, Indeed, Glassdoor, ZipRecruiter, Reed, Totaljobs, Monster, and CV-Library). On those sites, BeeLine looks for a workplace address in structured job data (and, on LinkedIn, in visible page text) so it can show the commute to that job.</li>
+      <li><strong>Text you highlight, only if you turn on “Route to highlighted text”.</strong> This setting is off by default. When it’s on, BeeLine runs on every website so it can show a button beside text you select. The selected text is only read when you highlight it and only sent anywhere when you click that button, to look up the route to it.</li>
       <li><strong>Page text, only if you click “Use AI”.</strong> If no address can be found automatically, BeeLine may offer to send a short excerpt of the posting to Anthropic. That only happens after you click the button - it is never sent in the background.</li>
     </ul>
 
@@ -102,7 +104,7 @@
     <h2>What BeeLine sends, and to whom</h2>
     <p>Requests are only made as needed to show a route:</p>
     <ul>
-      <li><strong>BeeLine route service</strong> - if you haven't added your own Google Maps key, BeeLine sends your origin and destination (home, work, or a detected job address), or your coordinates when you click “Use my current location”, to a small BeeLine service hosted on Cloudflare. It forwards the request to Google Maps with BeeLine’s key and returns the result. To enforce daily limits it counts lookups against your random install ID and a one-way hash of your IP address. These counts are deleted every day. Addresses and coordinates are not stored.</li>
+      <li><strong>BeeLine route service</strong> - if you haven't added your own Google Maps key, BeeLine sends your origin and destination (home, work, a detected job address, or text you highlighted and chose to route to), or your coordinates when you click “Use my current location”, to a small BeeLine service hosted on Cloudflare. It forwards the request to Google Maps with BeeLine’s key and returns the result. To enforce daily limits it counts lookups against your random install ID and a one-way hash of your IP address. These counts are deleted every day. Addresses and coordinates are not stored.</li>
       <li><strong>Google Maps Routes and Geocoding APIs</strong> (<code>routes.googleapis.com</code>, <code>maps.googleapis.com</code>) - if you have added your own key, BeeLine sends your origin and destination (or coordinates) directly to Google with your key. The same origin and destination may be loaded in a Maps embed so you can see the route.</li>
       <li><strong>Anthropic API</strong> (<code>api.anthropic.com</code>) - only if you have added an Anthropic key and you click “Use AI” on a job page where no address was found. BeeLine then sends a truncated excerpt of the posting (up to 6,000 characters) so the model can look for a workplace location. Your browsing history is not sent.</li>
       <li><strong>Google Maps</strong> (in the browser) - if you click through to open the full directions, Chrome navigates to Google Maps with the same origin and destination.</li>
@@ -115,6 +117,7 @@
       <li>Access to <code>routes.googleapis.com</code> and <code>maps.googleapis.com</code> - lets BeeLine fetch transit directions and look up your location with your own Google Maps API key, if you add one.</li>
       <li>Access to <code>api.anthropic.com</code> - lets BeeLine call Anthropic only when you click “Use AI”.</li>
       <li>Content scripts on supported job sites - let BeeLine read workplace details from a listing so the popup can show that commute.</li>
+      <li><code>scripting</code> and optional access to all websites - only requested when you turn on “Route to highlighted text” in Settings, so BeeLine can show its route button beside text you highlight on any page. You can remove this access at any time from Chrome’s extensions page.</li>
     </ul>
 
     <h2>Contact</h2>
@@ -130,6 +133,7 @@
       <span>© 2026 <a href="https://h4l-git.github.io/" class="footer-link" style="text-decoration: underline;">H4L</a> · Powered by GitHub Pages</span>
       <div class="footer-links">
         <a href="https://github.com/h4l-git/BeeLine" class="footer-link">GitHub</a>
+        <a href="https://www.notion.so/3e32d11332858029bc5dc0cc7bfa6481" class="footer-link">Notion</a>
         <a href="index.html" class="footer-link">Home</a>
       </div>
     </div>
