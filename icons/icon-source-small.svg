@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Toolbar version: thicker lines, fewer details so it stays crisp at 16 and 32 px. -->
+  <defs>
+    <clipPath id="pin"><path d="M64 122 C51 104 24 86 24 56 A40 40 0 0 1 104 56 C104 86 77 104 64 122 Z"/></clipPath>
+  </defs>
+  <g fill="#ffffff" stroke="#16161a" stroke-width="10">
+    <ellipse cx="28" cy="32" rx="14" ry="21" transform="rotate(-45 28 32)"/>
+    <ellipse cx="100" cy="32" rx="14" ry="21" transform="rotate(45 100 32)"/>
+  </g>
+  <path d="M64 122 C51 104 24 86 24 56 A40 40 0 0 1 104 56 C104 86 77 104 64 122 Z" fill="#ffc41e"/>
+  <g clip-path="url(#pin)" fill="#16161a">
+    <rect x="0" y="72" width="128" height="16"/>
+    <rect x="0" y="104" width="128" height="30"/>
+  </g>
+  <path d="M64 122 C51 104 24 86 24 56 A40 40 0 0 1 104 56 C104 86 77 104 64 122 Z" fill="none" stroke="#16161a" stroke-width="10" stroke-linejoin="round"/>
+  <circle cx="48" cy="48" r="8" fill="#16161a"/>
+  <circle cx="80" cy="48" r="8" fill="#16161a"/>
+</svg>

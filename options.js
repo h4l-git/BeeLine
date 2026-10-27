@@ -35,6 +35,7 @@ chrome.storage.sync.get(["apiKey", "home", "work", "aiApiKey", "highlightPostcod
   workEl.value = data.work || "";
   aiApiKeyEl.value = data.aiApiKey || "";
   highlightEl.checked = data.highlightPostcodes !== false; // on unless turned off
+  showLookupsLeft();
 });
 
 function showSaved() {
@@ -43,9 +44,68 @@ function showSaved() {
   setTimeout(() => statusEl.classList.remove("show"), 1600);
 }
 
+// How many shared route lookups are left today, and how long until midnight
+// UTC brings them back. Only shown while no key of the user's own is in use.
+const lookupsLeftEl = document.getElementById("lookupsLeft");
+
+function untilMidnightUtc() {
+  const now = new Date();
+  const midnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
+  const mins = Math.max(1, Math.ceil((midnight - now) / 60000));
+  const hours = Math.floor(mins / 60);
+  return hours ? `${hours}h ${mins % 60}m` : `${mins}m`;
+}
+
+async function showLookupsLeft() {
+  if (apiKeyEl.value.trim()) {
+    lookupsLeftEl.hidden = true;
+    return;
+  }
+  const remaining = await getRemainingLookups();
+  lookupsLeftEl.textContent = `${remaining} of ${FREE_ROUTE_LOOKUPS} left today · resets in ${untilMidnightUtc()}`;
+  lookupsLeftEl.classList.toggle("is-empty", remaining === 0);
+  lookupsLeftEl.hidden = false;
+}
+
+apiKeyEl.addEventListener("input", showLookupsLeft);
+setInterval(showLookupsLeft, 30000);
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes[LOOKUPS_KEY]) showLookupsLeft();
+});
+
 // Saves straight away, like a switch should; open job tabs pick it up live.
 highlightEl.addEventListener("change", () => {
   chrome.storage.sync.set({ highlightPostcodes: highlightEl.checked }, showSaved);
+});
+
+// Route to highlighted text works on any site, so turning it on asks Chrome
+// for access to all sites. background.js adds or removes the page script to
+// match the setting. The access itself stays once given: Chrome won't hand
+// back "all sites" while BeeLine always needs Google's and Anthropic's.
+const SELECTION_ORIGINS = ["https://*/*", "http://*/*"];
+const routeSelectionEl = document.getElementById("routeSelection");
+
+chrome.storage.sync.get(["routeSelection"], ({ routeSelection }) => {
+  if (routeSelection !== true) return;
+  // Site access can be taken away on Chrome's extensions page.
+  chrome.permissions.contains({ origins: SELECTION_ORIGINS }, (allowed) => {
+    routeSelectionEl.checked = allowed;
+  });
+});
+
+routeSelectionEl.addEventListener("change", () => {
+  if (!routeSelectionEl.checked) {
+    chrome.storage.sync.set({ routeSelection: false }, showSaved);
+    return;
+  }
+  // Must be asked straight from the click, before anything async.
+  chrome.permissions.request({ origins: SELECTION_ORIGINS }, (granted) => {
+    if (chrome.runtime.lastError || !granted) {
+      routeSelectionEl.checked = false;
+      return;
+    }
+    chrome.storage.sync.set({ routeSelection: true }, showSaved);
+  });
 });
 
 // Colour theme swatches, built from palettes.js. Real radio buttons underneath,

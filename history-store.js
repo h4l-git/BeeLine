@@ -63,6 +63,7 @@ async function saveToHistory({ job, origin, destination, jobPlace, label, leg })
     id,
     title: job.title || "Job posting",
     company: job.company || null,
+    salary: job.salary || null,
     url: job.url || null,
     jobPlace,
     origin,

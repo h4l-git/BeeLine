@@ -140,32 +140,37 @@
   color: var(--accent-ink);
 }
 
-.history-advert {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  max-width: 100%;
-  margin-top: 3px;
-  font-size: 11.5px;
-  font-weight: 700;
+a.history-title {
   color: var(--accent-ink);
-  text-decoration: none;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.history-advert:hover {
   text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
 }
 
-.history-advert:focus-visible {
+a.history-title:hover {
+  text-decoration-thickness: 2px;
+}
+
+a.history-title:focus-visible {
   outline: 2px solid var(--accent-ink);
   outline-offset: 1px;
   border-radius: 3px;
 }
 
-.history-advert .icon {
+.history-salary {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--accent-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-salary .icon {
   width: 12px;
   height: 12px;
   flex-shrink: 0;

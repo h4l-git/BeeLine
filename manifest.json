@@ -1,14 +1,17 @@
 {
   "manifest_version": 3,
-  "name": "BeeLine",
+  "name": "BeeLine - Commute Time for Job Search",
+  "short_name": "BeeLine",
   "version": "0.1.1",
   "description": "See the public transport commute to any job you're viewing, or your daily trip to work, in one click.",
-  "permissions": ["storage", "geolocation"],
+  "minimum_chrome_version": "116",
+  "permissions": ["storage", "geolocation", "scripting", "sidePanel"],
   "host_permissions": [
     "https://routes.googleapis.com/*",
     "https://maps.googleapis.com/*",
     "https://api.anthropic.com/*"
   ],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
@@ -16,13 +19,16 @@
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_popup": "popup.html",
+    "default_title": "BeeLine",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
+  },
+  "side_panel": {
+    "default_path": "popup.html"
   },
   "options_page": "options.html",
   "background": {

@@ -16,7 +16,7 @@
     <header>
       <div class="header-row">
         <div class="brand">
-          <img class="brand-icon" src="icons/icon128.png" alt="" />
+          <img class="brand-icon" src="icons/logo-sticker.svg" alt="" />
           <div class="brand-text">
             <div class="brand-title">BeeLine</div>
             <div class="brand-credit">By h4l.dev</div>
@@ -59,7 +59,10 @@
           >Get API key</a>
         </div>
         <input id="apiKey" type="text" placeholder="AIza…" autocomplete="off" />
-        <p class="free-quota">Without a key you get <strong>100 free route lookups a day</strong>, reset at midnight UTC.</p>
+        <p class="free-quota">
+          Without a key you get <strong>100 free route lookups a day</strong>, reset at midnight UTC.
+          <span id="lookupsLeft" class="lookups-left" hidden></span>
+        </p>
         <p class="hint">
           Leave blank to use BeeLine's free shared lookups.
           Add your own key, with the <strong>Routes API</strong> enabled, for unlimited use.
@@ -113,6 +116,17 @@
           <input id="highlightPostcodes" class="switch" type="checkbox" role="switch" checked />
         </div>
         <p class="hint">Postcodes, addresses, towns and cities on job listings. Click one to see the route to it.</p>
+      </div>
+
+      <div class="field">
+        <div class="toggle-row">
+          <label for="routeSelection">Route to highlighted text</label>
+          <input id="routeSelection" class="switch" type="checkbox" role="switch" />
+        </div>
+        <p class="hint">
+          Highlight a place, address or postcode on any site, then click the BeeLine button that appears to see the route.
+          Asks Chrome to let BeeLine run on all sites.
+        </p>
       </div>
 
       <div class="field">

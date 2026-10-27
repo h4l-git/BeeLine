@@ -16,12 +16,16 @@ const ROUTE_FIELDS = [
   "routes.legs.steps.distanceMeters",
   "routes.legs.steps.transitDetails",
   "routes.legs.stepsOverview",
+  "routes.legs.startLocation",
+  "routes.legs.endLocation",
 ].join(",");
 
 const CORS = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "GET, OPTIONS",
   "access-control-allow-headers": "x-beeline-install",
+  // Lets the extension read how many route lookups the user has left today.
+  "access-control-expose-headers": "x-beeline-remaining",
   "access-control-max-age": "86400",
 };
 

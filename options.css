@@ -119,6 +119,21 @@ input:focus {
   color: var(--text);
 }
 
+/* Today's count sits on its own line under the allowance. */
+.lookups-left {
+  display: block;
+  margin-top: 3px;
+  font-weight: 800;
+}
+
+.lookups-left[hidden] {
+  display: none;
+}
+
+.lookups-left.is-empty {
+  color: var(--danger-fg);
+}
+
 .footer {
   display: flex;
   align-items: center;
@@ -148,26 +163,6 @@ input:focus {
 
 .actions-row + .actions-row {
   margin-right: 0;
-}
-
-/* Chrome caps popups at 600px tall, and anything taller gets a page
-   scrollbar that makes the popup wider than the home view. So the window
-   stops at 600px (less the body padding around its frame) and the form
-   takes whatever the header leaves, scrolling inside itself if it has to. */
-.window {
-  display: flex;
-  flex-direction: column;
-  max-height: calc(600px - 5.5px);
-}
-
-header {
-  flex-shrink: 0;
-}
-
-.sheet {
-  flex: 1 1 auto;
-  min-height: 0;
-  max-height: none;
 }
 
 /* On/off switch in the same tile style as the buttons: a pill track with a

@@ -7,6 +7,17 @@ const jobPillTextEl = document.getElementById("jobPillText");
 let reversed = false;
 let useSavedInstead = false;
 
+// The panel stays open while the user moves between tabs and jobs, so a load
+// can be overtaken by a newer one. Each load gets a number and stops drawing
+// once a newer load has started.
+let loadRun = 0;
+
+// The tab the panel last loaded for, and the job and picked place it found
+// there, so switching to a tab with the same thing on it doesn't look the
+// route up again.
+let shownTabId;
+let shownJobKey = null;
+
 function getActiveTabId() {
   return new Promise((resolve) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -33,13 +44,20 @@ function getPickForTab(tabId) {
 }
 
 // Routes to the clicked location, keeping the job's title and link so the
-// history entry still says which job it was for.
+// history entry still says which job it was for. Text highlighted on a page
+// with no job on it is just a place: no job to name or keep in history.
 function jobFromPick(pick, job) {
+  const fromSelection = pick.source === "selection";
+  if (fromSelection && !job) {
+    return { status: "resolved", addresses: [pick.place], pickLabel: pick.label, fromSelection, placeOnly: true };
+  }
   return {
+    fromSelection,
     status: "resolved",
     addresses: [pick.place],
     title: (job && job.title) || pick.title || "Job posting",
     company: (job && job.company) || pick.company || null,
+    salary: (job && job.salary) || null,
     url: (job && job.url) || pick.url || null,
     pickLabel: pick.label,
   };
@@ -69,10 +87,10 @@ function shortLabel(text, max = 26) {
 }
 
 async function askAiForLocation(aiApiKey, jobText) {
-  const prompt = `You are extracting workplace location(s) from a job advertisement. Read the job posting text below and identify the physical work location(s) mentioned — a full street address where given, otherwise the most specific city/area mentioned. Some postings list more than one possible location (e.g. "based in London, Manchester, or remote from our Bristol office") — list every distinct one mentioned. If no location is mentioned anywhere, say so. Also give the job's title and the name of the hiring company, as written in the posting.
+  const prompt = `You are extracting workplace location(s) from a job advertisement. Read the job posting text below and identify the physical work location(s) mentioned — a full street address where given, otherwise the most specific city/area mentioned. Some postings list more than one possible location (e.g. "based in London, Manchester, or remote from our Bristol office") — list every distinct one mentioned. If no location is mentioned anywhere, say so. Also give the job's title, the name of the hiring company and the salary or pay (e.g. "£30,000 - £35,000 a year"), as written in the posting.
 
 Respond with ONLY a JSON object and nothing else, in this exact shape:
-{"addresses": ["<location string>", ...] or [], "title": "<job title>" or null, "company": "<company name>" or null, "confidence": "high" | "medium" | "low"}
+{"addresses": ["<location string>", ...] or [], "title": "<job title>" or null, "company": "<company name>" or null, "salary": "<salary>" or null, "confidence": "high" | "medium" | "low"}
 
 Job posting text:
 """
@@ -181,7 +199,8 @@ document.getElementById("settings").addEventListener("click", openOptions);
 document.getElementById("history").addEventListener("click", () => {
   window.location.href = "history.html";
 });
-document.getElementById("refresh").addEventListener("click", () => load());
+// Refresh always asks Google again, even for a job with a saved route.
+document.getElementById("refresh").addEventListener("click", () => load({ fresh: true }));
 document.getElementById("swap").addEventListener("click", () => {
   reversed = !reversed;
   load();
@@ -199,6 +218,8 @@ const ROUTE_FIELDS = [
   "routes.legs.steps.distanceMeters",
   "routes.legs.steps.transitDetails",
   "routes.legs.stepsOverview",
+  "routes.legs.startLocation",
+  "routes.legs.endLocation",
 ].join(",");
 
 // Saved homes can be raw "lat,lng" coordinates, which the Routes API wants
@@ -242,6 +263,13 @@ async function fetchRoutesApi(apiKey, origin, destination) {
     );
   }
   return data || {};
+}
+
+function latLng(location) {
+  const point = location && location.latLng;
+  return point && typeof point.latitude === "number"
+    ? { lat: point.latitude, lng: point.longitude }
+    : null;
 }
 
 // Routes API durations are strings like "754s".
@@ -327,6 +355,9 @@ function toLeg(apiLeg) {
   const text = apiLeg.localizedValues || {};
   const distanceMeters = apiLeg.distanceMeters || 0;
   return {
+    // Where the journey starts and ends, so the map can fit both in view.
+    start: latLng(apiLeg.startLocation),
+    end: latLng(apiLeg.endLocation),
     duration: (text.duration && text.duration.text) || formatDuration(seconds(apiLeg.duration)),
     distance: (text.distance && text.distance.text) || `${(distanceMeters / 1000).toFixed(1)} km`,
     distanceMeters,
@@ -336,13 +367,25 @@ function toLeg(apiLeg) {
   };
 }
 
-async function fetchRoute(apiKey, origin, destination) {
+// The panel reloads as the user moves between tabs and pages, so routes found
+// in the last few minutes are reused rather than using up more lookups.
+// Refresh skips this.
+const ROUTE_CACHE_MS = 5 * 60 * 1000;
+const routeCache = new Map();
+
+async function fetchRoute(apiKey, origin, destination, { fresh = false } = {}) {
+  const key = JSON.stringify([apiKey || "", origin, destination]);
+  const cached = routeCache.get(key);
+  if (!fresh && cached && Date.now() - cached.at < ROUTE_CACHE_MS) return cached.leg;
+
   const data = await fetchRoutesApi(apiKey, origin, destination);
   const route = data.routes && data.routes[0];
   if (!route || !route.legs || !route.legs.length) {
     throw new Error("No transit route found between these places.");
   }
-  return toLeg(route.legs[0]);
+  const leg = toLeg(route.legs[0]);
+  routeCache.set(key, { leg, at: Date.now() });
+  return leg;
 }
 
 function swapForDirection(reversed, home, other) {
@@ -355,13 +398,13 @@ function swapForDirection(reversed, home, other) {
 // so on the shared service only the first few are tried.
 const MAX_SHARED_CANDIDATES = 3;
 
-async function resolveClosestRoute(apiKey, home, addresses, reversed) {
+async function resolveClosestRoute(apiKey, home, addresses, reversed, fresh) {
   const candidates = apiKey ? addresses : addresses.slice(0, MAX_SHARED_CANDIDATES);
   const attempts = await Promise.all(
     candidates.map(async (addr) => {
       const [origin, destination] = swapForDirection(reversed, home, addr);
       try {
-        const result = await fetchRoute(apiKey, origin, destination);
+        const result = await fetchRoute(apiKey, origin, destination, { fresh });
         return { result, origin, destination, distance: result.distanceMeters };
       } catch (e) {
         return { error: e };
@@ -381,9 +424,9 @@ async function resolveClosestRoute(apiKey, home, addresses, reversed) {
   return valid[0];
 }
 
-function render(leg, origin, destination, jobActive, apiKey) {
+function render(leg, origin, destination, jobActive, apiKey, summaryMeta) {
   contentEl.innerHTML = "";
-  renderRoute(contentEl, leg, origin, destination, apiKey);
+  renderRoute(contentEl, leg, origin, destination, apiKey, summaryMeta);
 
   if (!jobActive) return null;
 
@@ -402,10 +445,50 @@ function render(leg, origin, destination, jobActive, apiKey) {
   return actions;
 }
 
+// A route already found for this job, from this home, in this direction, so
+// opening a job again doesn't use another lookup. Recent comes first, so the
+// newest copy wins.
+async function findStoredRoute(job, home, reversed) {
+  const [recent, saved] = await Promise.all([getHistory(), getSaved()]);
+  return (
+    [...recent, ...saved].find(
+      (entry) =>
+        entry.leg &&
+        job.addresses.includes(entry.jobPlace) &&
+        entry.id === historyId(job, entry.jobPlace) &&
+        (reversed
+          ? entry.origin === entry.jobPlace && entry.destination === home
+          : entry.origin === home && entry.destination === entry.jobPlace)
+    ) || null
+  );
+}
+
+// Draws a saved route. Its departure times are long gone, so it says when it
+// was checked and offers to fetch live times instead.
+function renderStoredRoute(entry, apiKey) {
+  const actions = render(
+    entry.leg,
+    entry.origin,
+    entry.destination,
+    true,
+    apiKey,
+    `${entry.leg.distance} · Checked ${checkedAt(entry.savedAt)}`
+  );
+  actions.prepend(makeSaveButton(entry));
+  const live = document.createElement("button");
+  live.className = "use-saved-link";
+  live.textContent = "Get live times";
+  live.title = "Look the route up again (uses a lookup)";
+  live.addEventListener("click", () => load({ fresh: true }));
+  actions.appendChild(live);
+}
+
 async function runAi(tabId, job, aiApiKey) {
+  const run = loadRun;
   setLoading("Asking AI to read the job description…");
   try {
     const result = await askAiForLocation(aiApiKey, job.text);
+    if (run !== loadRun) return;
     const addresses = (result && result.addresses) || [];
     if (!addresses.length) {
       setState({
@@ -415,20 +498,20 @@ async function runAi(tabId, job, aiApiKey) {
       });
       return;
     }
-    chrome.storage.session.set(
-      {
-        [`job_${tabId}`]: {
-          status: "resolved",
-          addresses,
-          // The job card's name (read on the page) beats the AI's reading.
-          title: job.title || result.title || "Job posting",
-          company: job.company || result.company || null,
-          url: job.url,
-        },
+    // The panel reloads itself when this is saved (see the listeners below).
+    chrome.storage.session.set({
+      [`job_${tabId}`]: {
+        status: "resolved",
+        addresses,
+        // The job card's name (read on the page) beats the AI's reading.
+        title: job.title || result.title || "Job posting",
+        company: job.company || result.company || null,
+        salary: job.salary || result.salary || null,
+        url: job.url,
       },
-      () => load()
-    );
+    });
   } catch (err) {
+    if (run !== loadRun) return;
     setState({ icon: "alert", title: "AI lookup failed", description: err.message }, "error");
   }
 }
@@ -439,11 +522,15 @@ function getSyncSettings() {
   });
 }
 
-async function load() {
+async function load({ fresh = false } = {}) {
+  const run = ++loadRun;
+  const stale = () => run !== loadRun;
   jobPillEl.hidden = true;
   sitePillEl.hidden = true;
 
   const [data, tabId] = await Promise.all([getSyncSettings(), getActiveTabId()]);
+  if (stale()) return;
+  shownTabId = tabId;
 
   if (!data.home) {
     routeLabelEl.textContent = "Set up required";
@@ -459,23 +546,36 @@ async function load() {
   const [detectedJob, pick] = useSavedInstead
     ? [null, null]
     : await Promise.all([getJobForTab(tabId), getPickForTab(tabId)]);
+  if (stale()) return;
+  shownJobKey = useSavedInstead ? null : JSON.stringify([detectedJob, pick]);
   const job = pick ? jobFromPick(pick, detectedJob) : detectedJob;
 
   if (job && job.addresses && job.addresses.length) {
     const place = job.pickLabel ? shortLabel(job.pickLabel) : "Job";
     routeLabelEl.textContent = reversed ? `${place} → Home` : `Home → ${place}`;
-    jobPillEl.hidden = false;
-    jobPillTextEl.textContent = job.company ? `${job.title} at ${job.company}` : job.title;
+    if (!job.placeOnly) {
+      jobPillEl.hidden = false;
+      jobPillTextEl.textContent = job.company ? `${job.title} at ${job.company}` : job.title;
+    }
 
     setLoading();
+    const stored = !fresh && !job.placeOnly && (await findStoredRoute(job, data.home, reversed).catch(() => null));
+    if (stale()) return;
+    if (stored) {
+      renderStoredRoute(stored, data.apiKey);
+      return;
+    }
     try {
       const { result, origin, destination } = await resolveClosestRoute(
         data.apiKey,
         data.home,
         job.addresses,
-        reversed
+        reversed,
+        fresh
       );
+      if (stale()) return;
       const actions = render(result, origin, destination, true, data.apiKey);
+      if (job.placeOnly) return;
       saveToHistory({
         job,
         origin,
@@ -492,7 +592,19 @@ async function load() {
           // History is a convenience; never let it break the route view.
         });
     } catch (err) {
-      setState({ icon: "alert", title: "Couldn't load route", description: err.message }, "error");
+      if (stale()) return;
+      // Highlighted text can be anything, so "no route" usually means it
+      // isn't a place Google Maps knows.
+      if (job.fromSelection && !err.limited) {
+        setState({
+          icon: "searchX",
+          title: `No route to “${shortLabel(job.pickLabel, 40)}”`,
+          description:
+            "Google Maps couldn't find that as a place, or there's no public transport route to it. Try highlighting a full address, postcode or town.",
+        });
+      } else {
+        setState({ icon: "alert", title: "Couldn't load route", description: err.message }, "error");
+      }
     }
     return;
   }
@@ -515,7 +627,7 @@ async function load() {
   }
 
   if (!data.work) {
-    routeLabelEl.textContent = "Ready when you are";
+    routeLabelEl.textContent = "Ready";
     setState({
       icon: "briefcase",
       title: "Nothing to route to yet",
@@ -531,11 +643,41 @@ async function load() {
 
   setLoading();
   try {
-    const result = await fetchRoute(data.apiKey, origin, destination);
+    const result = await fetchRoute(data.apiKey, origin, destination, { fresh });
+    if (stale()) return;
     render(result, origin, destination, false, data.apiKey);
   } catch (err) {
+    if (stale()) return;
     setState({ icon: "alert", title: "Couldn't load route", description: err.message }, "error");
   }
 }
+
+// Showing a different tab's job (or a new job on this tab) starts afresh,
+// leaving "use my saved work address" behind.
+function reloadForNewJob() {
+  useSavedInstead = false;
+  load();
+}
+
+chrome.windows.getCurrent((win) => {
+  chrome.tabs.onActivated.addListener(async ({ tabId, windowId }) => {
+    if (windowId !== win.id) return;
+    const [job, pick] = await Promise.all([getJobForTab(tabId), getPickForTab(tabId)]);
+    if (useSavedInstead || JSON.stringify([job, pick]) !== shownJobKey) {
+      reloadForNewJob();
+    } else {
+      shownTabId = tabId;
+    }
+  });
+});
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "session") {
+    const keys = [`job_${shownTabId}`, `pick_${shownTabId}`];
+    if (keys.some((key) => key in changes)) reloadForNewJob();
+  } else if (area === "sync") {
+    if (["apiKey", "home", "work", "aiApiKey"].some((key) => key in changes)) load();
+  }
+});
 
 load();

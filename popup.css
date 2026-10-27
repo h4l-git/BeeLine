@@ -25,7 +25,13 @@
   --route-line: #d4d4dc;
   --icon-shadow: #c9c9cf;
   --key-slab: #b4b4be;
+  /* Honeycomb lines behind the page: a faint wash of the accent. */
+  --hive-line: color-mix(in srgb, var(--accent-ink) 13%, transparent);
+  --hive-tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='45' viewBox='0 0 26 45'%3E%3Cpath d='M0 7.5 13 0l13 7.5v15L13 30 0 22.5zM13 30v15' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E");
   --radius: 12px;
+  /* Google Maps wordmark on the "Open full route" button; the dark one has
+     a lighter "Maps" so it reads on the dark button. */
+  --maps-logo: url("icons/google-maps-light.png");
 }
 
 /* Dark follows the system unless the header toggle has pinned a theme. */
@@ -48,6 +54,8 @@
     --route-line: #3a3a46;
     --icon-shadow: #000000;
     --key-slab: #44444f;
+    --hive-line: color-mix(in srgb, var(--accent-ink) 8%, transparent);
+    --maps-logo: url("icons/google-maps-dark.png");
   }
 }
 
@@ -69,6 +77,8 @@
   --route-line: #3a3a46;
   --icon-shadow: #000000;
   --key-slab: #44444f;
+  --hive-line: color-mix(in srgb, var(--accent-ink) 8%, transparent);
+  --maps-logo: url("icons/google-maps-dark.png");
 }
 
 :root[data-theme="light"] {
@@ -79,28 +89,47 @@
   box-sizing: border-box;
 }
 
-/* The window fills the popup edge to edge with square corners, framed like
-   the buttons: a thin outer line (the ink showing through the body's
+/* The window fills the side panel edge to edge with square corners, framed
+   like the buttons: a thin outer line (the ink showing through the body's
    padding), a gap, then the thick outline. There is no room for the slab
-   outside the popup edge, so the frame leaves it out. */
+   outside the panel edge, so the frame leaves it out. */
 html {
   background: var(--ink);
 }
 
 body {
   font-family: "Nunito", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
-  width: 360px;
+  height: 100vh;
   margin: 0;
   padding: 2.75px;
   color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
 
+/* The header keeps its size and the sheet below takes the rest of the panel,
+   scrolling inside itself if it has to. */
 .window {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   background: var(--bg);
   border: 2px solid var(--ink);
   box-shadow: 0 0 0 1.5px var(--bg);
   overflow: hidden;
+  position: relative;
+  isolation: isolate;
+}
+
+/* The hive pattern sits under everything; cards keep their solid fill. */
+.window::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--hive-line);
+  -webkit-mask: var(--hive-tile) 0 0 / 26px 45px repeat;
+  mask: var(--hive-tile) 0 0 / 26px 45px repeat;
 }
 
 .icon {
@@ -115,9 +144,10 @@ body {
   display: block;
 }
 
+/* No line under the header on any page: the hive pattern runs straight through. */
 header {
+  flex-shrink: 0;
   padding: 12px 12px 12px 14px;
-  border-bottom: 1px solid var(--border);
 }
 
 .header-row {
@@ -219,14 +249,18 @@ header {
   display: none;
 }
 
-/* Two right-aligned rows: route controls on top, theme, website and rating below. */
+/* Two right-aligned rows: route controls on top, theme, website and rating below.
+   The window frame (2.75px body padding + 2px border) leaves everything a
+   quarter pixel off the grid; the extra 0.25px here puts the keys back on
+   whole pixels. Otherwise the browser rounds each key's face and its icon
+   separately and the icon can land half a pixel off centre. */
 .actions {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 10px;
   flex-shrink: 0;
-  padding: 0 6px 4px 0;
+  padding: 0.25px 6.25px 4px 0;
 }
 
 .actions-row {
@@ -237,9 +271,10 @@ header {
 
 /* Honeycomb: the second row sits half a cell in, nested into the notches
    of the first. Rows of regular hexagons are (width + gap) × √3/2 apart
-   (the extra 10px cancels the column gap above). */
+   (the extra 10px cancels the column gap above). That works out to
+   -8.82px, rounded to -9px so the second row stays on whole pixels too. */
 .actions-row + .actions-row {
-  margin-top: calc((26px + var(--cell-gap)) * 0.866 - 30px - 10px);
+  margin-top: -9px;
   margin-right: calc((26px + var(--cell-gap)) / 2);
 }
 
@@ -264,7 +299,7 @@ header {
 
 .btn:hover,
 .link-out:hover,
-.use-saved-link:hover {
+.use-saved-link:hover:hover {
   background: var(--face-hover);
   transform: translate(-1px, -1px);
   box-shadow: var(--ring), 4px 5px 0 2.75px var(--key-slab);
@@ -272,14 +307,14 @@ header {
 
 .btn:active,
 .link-out:active,
-.use-saved-link:active {
+.use-saved-link:active:active {
   transform: translate(3px, 4px);
   box-shadow: var(--ring);
 }
 
 .btn:focus-visible,
 .link-out:focus-visible,
-.use-saved-link:focus-visible {
+.use-saved-link:focus-visible:focus-visible {
   outline: 2px solid var(--accent-ink);
   outline-offset: 4px;
 }
@@ -290,10 +325,12 @@ header {
    plain), ::after is both outlines as one hexagon ring cut with evenodd,
    and a drop-shadow on the button casts the slab in the same shape. The
    box is 26 × 30 because a regular hexagon is 2/√3 as tall as it is wide;
-   vertical offsets are horizontal ones × 1.155 for the same reason. */
+   vertical offsets are horizontal ones × 1.155 for the same reason.
+   The face matches the primary .btn: accent shaded lighter at the top,
+   with a dark label so it stays readable in either theme. */
 .actions button {
-  --face: linear-gradient(180deg, var(--bg) 0%, var(--bg) 45%, var(--bg-alt) 100%);
-  --face-hover: linear-gradient(180deg, var(--bg) 0%, var(--accent-soft) 100%);
+  --face: linear-gradient(180deg, color-mix(in srgb, var(--accent-1) 78%, #fff) 0%, var(--accent-1) 60%);
+  --face-hover: linear-gradient(180deg, color-mix(in srgb, var(--accent-1) 68%, #fff) 0%, color-mix(in srgb, var(--accent-1) 90%, #fff) 60%);
   --hex-face: var(--face);
   --hex-line: var(--ink);
   --hex-corner: calc(50% - 3px) calc(25% - 1.73px) no-repeat;
@@ -304,7 +341,7 @@ header {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--ink);
+  color: var(--on-accent);
   font-family: inherit;
   cursor: pointer;
   display: flex;
@@ -335,18 +372,16 @@ header {
     var(--bg);
 }
 
-/* Four nested hexagons: outer edge, thin line, thick line, face. */
+/* Both outlines: a 1.25px thin line on the outer edge, a 1.5px gap, then
+   the 2px thick line. They're drawn as SVG strokes in a mask rather than
+   a clip-path, because clip-path leaves thin slanted edges jagged. The
+   viewBox is this box's size (31.5 × 36.37), so 1 unit is 1px. */
 .actions button::after {
+  --hex-ring: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 31.5 36.373' preserveAspectRatio='none'%3E%3Cg fill='none' stroke='%23000'%3E%3Cpath stroke-width='1.25' d='M15.75 .722 30.875 9.454v17.465L15.75 35.651.625 26.919V9.454z'/%3E%3Cpath stroke-width='2' d='M15.75 4.33 27.75 11.258v13.857L15.75 32.043 3.75 25.115V11.258z'/%3E%3C/g%3E%3C/svg%3E");
   inset: -3.18px -2.75px;
   background: var(--hex-line);
-  clip-path: polygon(evenodd,
-    50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%, 50% 0,
-    50% 1.44px, calc(100% - 1.25px) calc(25% + 0.72px), calc(100% - 1.25px) calc(75% - 0.72px),
-    50% calc(100% - 1.44px), 1.25px calc(75% - 0.72px), 1.25px calc(25% + 0.72px), 50% 1.44px,
-    50% 3.18px, calc(100% - 2.75px) calc(25% + 1.59px), calc(100% - 2.75px) calc(75% - 1.59px),
-    50% calc(100% - 3.18px), 2.75px calc(75% - 1.59px), 2.75px calc(25% + 1.59px), 50% 3.18px,
-    50% 5.49px, calc(100% - 4.75px) calc(25% + 2.74px), calc(100% - 4.75px) calc(75% - 2.74px),
-    50% calc(100% - 5.49px), 4.75px calc(75% - 2.74px), 4.75px calc(25% + 2.74px), 50% 5.49px);
+  -webkit-mask: var(--hex-ring) center / 100% 100% no-repeat;
+  mask: var(--hex-ring) center / 100% 100% no-repeat;
 }
 
 .actions button:hover {
@@ -367,22 +402,17 @@ header {
   --hex-line: var(--accent-ink);
 }
 
-/* Header icons are drawn like the logo: heavy black strokes, yellow fills
-   and the same soft grey drop shadow the pins cast. */
+/* Header icons are drawn like the logo: heavy dark strokes, filled with
+   the theme colour, flat on the accent face. */
 .actions .icon {
   width: 14px;
   height: 14px;
   stroke-width: 2.3;
-  filter: drop-shadow(1.5px 2px 0 var(--icon-shadow));
   transition: transform 0.1s ease;
 }
 
 .actions .icon .fill {
   fill: var(--accent-1);
-}
-
-.actions button:active .icon {
-  filter: none;
 }
 
 /* theme.js marks the toggle with the theme in effect; show the other one. */
@@ -396,9 +426,9 @@ header {
 }
 
 .sheet {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 14px;
-  min-height: 140px;
-  max-height: 440px;
   overflow-y: auto;
   position: relative;
 }
@@ -530,23 +560,63 @@ header {
 
 .map-frame {
   width: 100%;
-  height: 170px;
+  height: 160px;
   border: 1px solid var(--border-strong);
   border-radius: 10px;
   overflow: hidden;
   margin-bottom: 14px;
 }
 
+/* Google's map is drawn taller and pulled up so the box in its top corner
+   sits outside the frame. The crops match MAP_CROP in route-view.js, which
+   explains the two sizes. */
 .map-frame iframe {
   width: 100%;
-  height: 100%;
+  height: calc(100% + 36px);
+  margin-top: -36px;
   display: block;
+}
+
+.map-frame.is-framed {
+  height: 200px;
+}
+
+.map-frame.is-framed iframe {
+  height: calc(100% + 104px);
+  margin-top: -104px;
+}
+
+/* "Show more steps" under the steps that fit, with a chevron that flips
+   once they're all showing. */
+.use-saved-link.steps-more {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 10px auto 0;
+}
+
+.use-saved-link.steps-more[hidden] {
+  display: none;
+}
+
+.steps-more .icon {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.15s ease;
+}
+
+.steps-more[aria-expanded="true"] .icon {
+  transform: rotate(180deg);
 }
 
 /* Steps read like the logo's route: a line joining the stops. */
 .steps {
   display: flex;
   flex-direction: column;
+}
+
+.step[hidden] {
+  display: none;
 }
 
 .step {
@@ -619,6 +689,16 @@ header {
 .link-out .icon {
   width: 14px;
   height: 14px;
+}
+
+/* The logo sits on the button's own face, with no box of its own, and
+   lines up with the text beside it. */
+.maps-logo {
+  display: inline-block;
+  width: 86px;
+  height: 17px;
+  margin-top: 1px;
+  background: var(--maps-logo) center / contain no-repeat;
 }
 
 .use-saved-link {

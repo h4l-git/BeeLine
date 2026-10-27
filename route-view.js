@@ -17,7 +17,9 @@ const ICON_PATHS = {
   clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
   route: '<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>',
   bookmark: '<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>',
+  banknote: '<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>',
   pin: '<path d="M20 10c0 5-5.54 10.19-7.4 11.8a1 1 0 0 1-1.2 0C9.54 20.19 4 15 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
+  chevron: '<path d="m6 9 6 6 6-6"/>',
 };
 
 function svgIcon(name) {
@@ -70,14 +72,63 @@ function directionsUrl(origin, destination) {
   return `https://www.google.com/maps/dir/?${params.toString()}`;
 }
 
-function embedMapUrl(apiKey, origin, destination) {
+function embedMapUrl(apiKey, origin, destination, view) {
   const params = new URLSearchParams({
     key: apiKey,
     origin,
     destination,
     mode: "transit",
+    ...view,
   });
   return `https://www.google.com/maps/embed/v1/directions?${params.toString()}`;
+}
+
+// Google's map is drawn taller than the frame and pulled up, so the box it
+// puts in the top corner sits outside the frame. Google's logo and credits
+// along the bottom stay in view, as its terms require.
+//
+// With the journey's start and end known, the map is 200px and is centred
+// and zoomed to fit both. A map drawn 200px or taller gets Google's big
+// directions card, so 104px is cut off the top to hide it.
+// Without them (older saved routes) Google frames the route itself, which
+// would put the start under a cut that big. So the map stays under 200px,
+// where Google shows only a small "View larger map" box, and 36px hides it.
+const MAP_CROP = { framed: 104, auto: 36 };
+
+// Fractions of the way across and down the whole world map (Web Mercator),
+// the projection Google's tiles use.
+function worldPoint({ lat, lng }) {
+  const sin = Math.sin((lat * Math.PI) / 180);
+  return { x: (lng + 180) / 360, y: 0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI) };
+}
+
+function latFromWorldY(y) {
+  return (Math.atan(Math.sinh(Math.PI * (1 - 2 * y))) * 180) / Math.PI;
+}
+
+// The centre and zoom that fit both ends inside the part of the map that
+// shows. The bottom keeps more room, for Google's logo and credits.
+function mapViewFor(start, end, width, height, crop) {
+  const pad = { side: 34, top: 30, bottom: 44 };
+  const a = worldPoint(start);
+  const b = worldPoint(end);
+  const fitW = width - 2 * pad.side;
+  const fitH = height - pad.top - pad.bottom;
+  if (fitW <= 0 || fitH <= 0) return null;
+
+  let zoom = 16;
+  while (zoom > 2 && (Math.abs(a.x - b.x) * 256 * 2 ** zoom > fitW || Math.abs(a.y - b.y) * 256 * 2 ** zoom > fitH)) {
+    zoom -= 1;
+  }
+
+  // Google centres the whole drawn map, so shift the centre to put the two
+  // ends in the middle of the part that shows.
+  const worldPx = 256 * 2 ** zoom;
+  const shownMiddle = crop + pad.top + fitH / 2;
+  const drawnMiddle = (crop + height) / 2;
+  const x = (a.x + b.x) / 2;
+  const y = (a.y + b.y) / 2 - (shownMiddle - drawnMiddle) / worldPx;
+  return { center: `${latFromWorldY(y).toFixed(5)},${(x * 360 - 180).toFixed(5)}`, zoom: String(zoom) };
 }
 
 function renderStep(step) {
@@ -112,6 +163,96 @@ function renderStep(step) {
   return wrap;
 }
 
+// The first steps show in full; the rest wait behind a "Show more" button,
+// so the Maps link and the buttons under the route stay in view without
+// scrolling. As many steps show as fit, worked out again when the panel is
+// resized or the buttons below change.
+function renderSteps(container, parts) {
+  const steps = document.createElement("div");
+  steps.className = "steps";
+  const rows = parts.map((step) => steps.appendChild(renderStep(step)));
+
+  const more = document.createElement("button");
+  more.type = "button";
+  more.className = "use-saved-link steps-more";
+  more.hidden = true;
+
+  let expanded = false;
+
+  function setMoreLabel(hiddenCount) {
+    const label = expanded
+      ? "Show fewer steps"
+      : hiddenCount === rows.length
+        ? `Show ${hiddenCount} step${hiddenCount === 1 ? "" : "s"}`
+        : `Show ${hiddenCount} more step${hiddenCount === 1 ? "" : "s"}`;
+    more.textContent = label;
+    more.insertAdjacentHTML("beforeend", svgIcon("chevron"));
+    more.setAttribute("aria-expanded", String(expanded));
+  }
+
+  function fit() {
+    rows.forEach((row) => (row.hidden = false));
+    if (expanded) return;
+    more.hidden = true;
+    const overflows = () => container.scrollHeight > container.clientHeight + 1;
+    if (!overflows()) return;
+
+    more.hidden = false;
+    let shown = rows.length;
+    while (shown > 0 && overflows()) {
+      shown -= 1;
+      rows[shown].hidden = true;
+      setMoreLabel(rows.length - shown);
+    }
+    if (shown === rows.length) more.hidden = true;
+  }
+
+  more.addEventListener("click", () => {
+    expanded = !expanded;
+    if (expanded) {
+      rows.forEach((row) => (row.hidden = false));
+      setMoreLabel(0);
+    } else {
+      fit();
+      container.scrollTop = 0;
+    }
+  });
+
+  container.appendChild(steps);
+  container.appendChild(more);
+
+  // Wait for the rest of the route view (Maps link, buttons) to be added,
+  // then fit, and fit again whenever any of it changes size.
+  requestAnimationFrame(() => {
+    if (!steps.isConnected) return;
+    fit();
+    let queued = false;
+    const observer = new ResizeObserver(() => {
+      if (!steps.isConnected) return observer.disconnect();
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        if (steps.isConnected) fit();
+      });
+    });
+    observer.observe(container);
+    [...container.children].forEach((child) => {
+      if (child !== steps && child !== more) observer.observe(child);
+    });
+  });
+}
+
+// When a saved route was found, e.g. "27 Oct, 14:02".
+function checkedAt(timestamp) {
+  return new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(timestamp);
+}
+
 // summaryMeta overrides the line under the journey time (the history page
 // uses it to say when the route was checked, since its times are old).
 function renderRoute(container, leg, origin, destination, apiKey, summaryMeta) {
@@ -137,26 +278,32 @@ function renderRoute(container, leg, origin, destination, apiKey, summaryMeta) {
     const mapWrap = document.createElement("div");
     mapWrap.className = "map-frame";
     const iframe = document.createElement("iframe");
-    iframe.src = embedMapUrl(embedKey, origin, destination);
-    iframe.width = "100%";
-    iframe.height = "170";
     iframe.style.border = "0";
-    iframe.loading = "lazy";
     iframe.referrerPolicy = "no-referrer";
     mapWrap.appendChild(iframe);
     container.appendChild(mapWrap);
+
+    let view = null;
+    if (leg.start && leg.end) {
+      mapWrap.classList.add("is-framed");
+      view = mapViewFor(leg.start, leg.end, mapWrap.clientWidth, mapWrap.clientHeight, MAP_CROP.framed);
+      if (!view) mapWrap.classList.remove("is-framed");
+    }
+    iframe.src = embedMapUrl(embedKey, origin, destination, view || {});
   }
 
-  const steps = document.createElement("div");
-  steps.className = "steps";
-  leg.parts.forEach((step) => steps.appendChild(renderStep(step)));
-  container.appendChild(steps);
+  renderSteps(container, leg.parts);
 
   const link = document.createElement("a");
   link.className = "link-out";
   link.href = directionsUrl(origin, destination);
   link.target = "_blank";
-  link.textContent = "Open full route in Google Maps";
+  link.textContent = "Open full route in";
+  const logo = document.createElement("span");
+  logo.className = "maps-logo";
+  logo.setAttribute("role", "img");
+  logo.setAttribute("aria-label", "Google Maps");
+  link.appendChild(logo);
   link.insertAdjacentHTML("beforeend", svgIcon("external"));
   container.appendChild(link);
 }

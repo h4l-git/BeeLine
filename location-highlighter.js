@@ -1,6 +1,6 @@
 // Highlights locations on job pages: UK postcodes, street addresses, UK
 // towns and cities, US "City, ST" places, and wherever the job itself says it
-// is. Clicking one opens the BeeLine popup with the route to it.
+// is. Clicking one opens the BeeLine panel with the route to it.
 //
 // Runs after job-detector.js and shares its scope: isJobPage() and
 // currentJob come from there, and it calls onJobPageDetected() below.

@@ -71,36 +71,50 @@ function timeAgo(timestamp) {
   return new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short" }).format(timestamp);
 }
 
-function checkedAt(timestamp) {
-  return new Intl.DateTimeFormat(undefined, {
-    day: "numeric",
-    month: "short",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(timestamp);
-}
-
 function jobName(entry) {
   return entry.company ? `${entry.title} at ${entry.company}` : entry.title;
 }
 
-// "View advert on linkedin.com", opening the job listing in a new tab.
-function advertLink(url) {
-  let host;
+// The job title, linking to its advert in a new tab when there is one.
+function titleElement(entry) {
+  let url = null;
   try {
-    host = new URL(url).hostname.replace(/^www\./, "");
+    if (entry.url && /^https?:$/.test(new URL(entry.url).protocol)) url = entry.url;
   } catch (e) {
-    return null;
+    // No usable link; show plain text.
   }
-  const link = document.createElement("a");
-  link.className = "history-advert";
-  link.href = url;
-  link.target = "_blank";
-  link.rel = "noopener";
-  link.title = url;
-  link.innerHTML = svgIcon("external");
-  link.appendChild(document.createTextNode(`View advert on ${host}`));
-  return link;
+  const title = document.createElement(url ? "a" : "div");
+  title.className = "history-title";
+  title.textContent = entry.title;
+  if (url) {
+    title.href = url;
+    title.target = "_blank";
+    title.rel = "noopener";
+    title.title = `${entry.title} — open the job advert`;
+  } else {
+    title.title = entry.title;
+  }
+  return title;
+}
+
+// Hourly pay reads "£12.50/hour" however the advert worded it
+// ("an hour", "per hour", "/hr", "ph", "hourly").
+const HOURLY_PATTERN = /\s*(?:(?:\/\s*|per\s+|an?\s+)(?:hour|hr)s?|p\/?h|hourly)\b/gi;
+
+function formatSalary(salary) {
+  return salary.replace(HOURLY_PATTERN, "/hour");
+}
+
+// The pay the advert listed, if BeeLine found one.
+function salaryElement(salary) {
+  if (!salary) return null;
+  salary = formatSalary(salary);
+  const el = document.createElement("div");
+  el.className = "history-salary";
+  el.innerHTML = svgIcon("banknote");
+  el.appendChild(document.createTextNode(salary));
+  el.title = salary;
+  return el;
 }
 
 function renderTabs(counts) {
@@ -154,11 +168,7 @@ function renderItem(entry) {
 
   const text = document.createElement("div");
   text.className = "history-text";
-  const title = document.createElement("div");
-  title.className = "history-title";
-  title.textContent = entry.title;
-  title.title = entry.title;
-  text.appendChild(title);
+  text.appendChild(titleElement(entry));
   if (entry.company) {
     const company = document.createElement("div");
     company.className = "history-company";
@@ -171,8 +181,8 @@ function renderItem(entry) {
   place.appendChild(document.createTextNode(entry.jobPlace));
   place.title = entry.jobPlace;
   text.appendChild(place);
-  const advert = advertLink(entry.url);
-  if (advert) text.appendChild(advert);
+  const salary = salaryElement(entry.salary);
+  if (salary) text.appendChild(salary);
 
   const tools = document.createElement("div");
   tools.className = "history-tools";
