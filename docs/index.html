@@ -117,7 +117,95 @@
       color: var(--text-muted);
     }
 
+    /* ---------- Screenshot gallery: a sideways strip of journey cards ---------- */
+    .shots { padding: 0 0 96px; }
+    .shots-head {
+      max-width: 1000px;
+      margin: 0 auto 28px;
+      padding: 0 24px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .shots-head .pill { margin-bottom: 16px; }
+    .shots-head h2 { margin-bottom: 0; }
+    .shots-nav {
+      display: flex;
+      gap: 14px;
+      padding: 0 4px 6px 0;
+      flex-shrink: 0;
+    }
+    .shots-nav .key:disabled {
+      opacity: 0.35;
+      cursor: default;
+      pointer-events: none;
+    }
+    /* The strip lines up with the content column, then runs off the edge. */
+    .shots-track {
+      --gutter: max(24px, calc((100% - 952px) / 2));
+      display: flex;
+      gap: 28px;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      scroll-snap-type: x mandatory;
+      scroll-padding-inline: var(--gutter);
+      padding: 6px var(--gutter) 18px;
+      scrollbar-width: none;
+      outline: none;
+    }
+    .shots-track::-webkit-scrollbar { display: none; }
+    .shots-track:focus-visible .shot { outline: 2px solid var(--accent-ink); outline-offset: 4px; }
+    .shot {
+      flex: 0 0 min(760px, 84vw);
+      scroll-snap-align: start;
+      margin: 0;
+      background: var(--bg);
+      border: 2.5px solid var(--ink);
+      border-radius: 18px;
+      box-shadow: 5px 6px 0 var(--key-slab);
+      overflow: hidden;
+      transition: transform 0.25s ease, opacity 0.25s ease;
+    }
+    .shot img {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 16 / 10;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+    .shot:not(.is-active) { opacity: 0.6; transform: scale(0.97); }
+    .shots-dots {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .shots-dots button {
+      width: 10px;
+      height: 10px;
+      padding: 0;
+      border-radius: 10px;
+      border: 2px solid var(--ink);
+      background: var(--bg);
+      cursor: pointer;
+      transition: width 0.2s ease, background 0.2s ease;
+    }
+    .shots-dots button[aria-current="true"] {
+      width: 28px;
+      background: var(--accent-1);
+    }
+    .shots-dots button:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .shot, .shots-dots button { transition: none; }
+    }
+
     @media (max-width: 760px) {
+      .shots-head { align-items: flex-start; flex-direction: column; gap: 4px; }
+      .shots-nav { display: none; }
+      .shots-track { gap: 16px; }
       .hero { grid-template-columns: 1fr; gap: 24px; padding-top: 36px; }
       .hero-visual { max-width: 240px; order: -1; }
       h1 .line2 { white-space: normal; }
@@ -185,6 +273,81 @@
       </div>
     </div>
   </section>
+
+  <section class="shots" id="screenshots" aria-labelledby="shots-title">
+    <div class="shots-head">
+      <div>
+        <span class="pill">Screenshots</span>
+        <h2 id="shots-title">See it in action.</h2>
+      </div>
+      <div class="shots-nav">
+        <button class="key" type="button" data-dir="-1" aria-label="Previous screenshot">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
+        <button class="key" type="button" data-dir="1" aria-label="Next screenshot">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="shots-track" tabindex="0" role="region" aria-label="BeeLine screenshots">
+      <figure class="shot is-active"><img src="screenshots/screenshot-1.png" width="1280" height="800" alt="A job listing with the BeeLine popup showing a 38 minute tram route from home, with a map and each step." /></figure>
+      <figure class="shot"><img src="screenshots/screenshot-2.png" width="1280" height="800" alt="Place names highlighted on a job listing; clicking one shows the bus route there." loading="lazy" /></figure>
+      <figure class="shot"><img src="screenshots/screenshot-3.png" width="1280" height="800" alt="Two popups side by side: the morning trip to work and the evening trip home." loading="lazy" /></figure>
+      <figure class="shot"><img src="screenshots/screenshot-4.png" width="1280" height="800" alt="The job history list, with travel times for recently viewed and saved jobs." loading="lazy" /></figure>
+      <figure class="shot"><img src="screenshots/screenshot-5.png" width="1280" height="800" alt="Colour themes in light and dark mode, next to the settings page." loading="lazy" /></figure>
+    </div>
+    <div class="shots-dots" role="group" aria-label="Choose a screenshot"></div>
+  </section>
+
+  <script>
+    (() => {
+      const track = document.querySelector(".shots-track");
+      const shots = [...track.querySelectorAll(".shot")];
+      const dotsBox = document.querySelector(".shots-dots");
+      const [prev, next] = document.querySelectorAll(".shots-nav .key");
+      const smooth = matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+      let current = 0;
+
+      const dots = shots.map((_, i) => {
+        const dot = document.createElement("button");
+        dot.type = "button";
+        dot.setAttribute("aria-label", `Screenshot ${i + 1} of ${shots.length}`);
+        dot.addEventListener("click", () => goTo(i));
+        dotsBox.appendChild(dot);
+        return dot;
+      });
+
+      // Scroll position that brings card i to the start of the strip.
+      const stop = (i) => shots[i].offsetLeft - shots[0].offsetLeft;
+
+      function goTo(i) {
+        i = Math.max(0, Math.min(shots.length - 1, i));
+        track.scrollTo({ left: stop(i), behavior: smooth });
+      }
+
+      // The active card is the one nearest the strip's start.
+      function update() {
+        const x = track.scrollLeft;
+        const atEnd = x + track.clientWidth >= track.scrollWidth - 4;
+        current = atEnd ? shots.length - 1 : shots.reduce((best, _, i) =>
+          Math.abs(stop(i) - x) < Math.abs(stop(best) - x) ? i : best, 0);
+        shots.forEach((s, i) => s.classList.toggle("is-active", i === current));
+        dots.forEach((d, i) => d.setAttribute("aria-current", i === current ? "true" : "false"));
+        prev.disabled = current === 0;
+        next.disabled = current === shots.length - 1;
+      }
+
+      prev.addEventListener("click", () => goTo(current - 1));
+      next.addEventListener("click", () => goTo(current + 1));
+      track.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowLeft") { e.preventDefault(); goTo(current - 1); }
+        if (e.key === "ArrowRight") { e.preventDefault(); goTo(current + 1); }
+      });
+      track.addEventListener("scroll", () => requestAnimationFrame(update), { passive: true });
+      addEventListener("resize", update);
+      update();
+    })();
+  </script>
 
   <footer class="site-footer">
     <div class="site-footer-inner">
