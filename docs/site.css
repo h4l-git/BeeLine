@@ -123,10 +123,6 @@ a {
 
 /* ---------- Header: the popup's header row, full width ---------- */
 
-.site-header {
-  border-bottom: 1px solid var(--border);
-}
-
 .site-header-inner {
   display: flex;
   align-items: center;
@@ -360,10 +356,6 @@ a {
 }
 
 /* ---------- Footer ---------- */
-
-.site-footer {
-  border-top: 1px solid var(--border);
-}
 
 .site-footer-inner {
   display: grid;
