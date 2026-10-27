@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "BeeLine - Commute Time for Job Search",
   "short_name": "BeeLine",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "See the public transport commute to any job you're viewing, or your daily trip to work, in one click.",
   "minimum_chrome_version": "116",
   "permissions": ["storage", "geolocation", "scripting", "sidePanel"],
