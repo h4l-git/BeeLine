@@ -504,6 +504,98 @@ a {
   font-weight: 800;
 }
 
+/* ---------- Powered by ---------- */
+
+.powered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 56px 24px 8px;
+}
+
+.powered .pill {
+  margin: 0;
+}
+
+.powered-logos {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+}
+
+/* Quiet cards keep the logos off the honeycomb lines. */
+.powered-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 190px;
+  height: 64px;
+  padding: 0 24px;
+  box-sizing: border-box;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.powered-link:hover {
+  background: var(--bg-alt);
+  border-color: var(--ink);
+}
+
+.powered-link img {
+  display: block;
+  width: auto;
+}
+
+.powered-link .maps {
+  height: 24px;
+}
+
+.powered-link .claude {
+  height: 26px;
+}
+
+/* Keep both cards side by side on phones. */
+@media (max-width: 420px) {
+  .powered-logos {
+    gap: 12px;
+  }
+
+  .powered-link {
+    min-width: 156px;
+    height: 56px;
+    padding: 0 16px;
+  }
+}
+
+/* Each logo has a light and a dark version; show the one for the theme. */
+.theme-dark-only {
+  display: none !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme-light-only {
+    display: none !important;
+  }
+
+  :root:not([data-theme="light"]) .theme-dark-only {
+    display: block !important;
+  }
+}
+
+:root[data-theme="dark"] .theme-light-only {
+  display: none !important;
+}
+
+:root[data-theme="dark"] .theme-dark-only {
+  display: block !important;
+}
+
 /* ---------- Footer ---------- */
 
 .site-footer-inner {
