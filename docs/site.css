@@ -105,6 +105,155 @@ a {
   color: var(--accent-ink);
 }
 
+/* ---------- Bee routes across the honeycomb (hive.js) ---------- */
+
+/* Sits on the pattern, under the content. */
+.hive-trail {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.hive-pointer body {
+  cursor: pointer;
+}
+
+.hive-trail > g {
+  transition: opacity 0.3s ease;
+}
+
+.hive-trail > g.is-leaving {
+  opacity: 0;
+}
+
+.hive-hover {
+  fill: var(--accent-soft);
+  stroke: var(--accent-ink);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.hive-hover.is-on {
+  opacity: 0.8;
+}
+
+/* The two chosen cells: honey with the logo's bold outline. */
+.hive-end {
+  fill: var(--accent-1);
+  stroke: var(--ink);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hive-pop 0.4s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+.hive-end.is-waiting {
+  opacity: 0;
+  animation: none;
+}
+
+.hive-end.is-miss {
+  fill: var(--bg-alt);
+  stroke: var(--text-muted);
+  animation: hive-shake 0.4s ease;
+}
+
+/* Cells the bee passes light up behind it. */
+.hive-lit {
+  fill: color-mix(in srgb, var(--accent-1) 32%, transparent);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.hive-lit.is-on {
+  opacity: 1;
+}
+
+.hive-reveal {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 16;
+  stroke-linejoin: round;
+}
+
+.hive-glow,
+.hive-dots {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hive-glow {
+  stroke: var(--accent-1);
+  stroke-width: 7;
+  opacity: 0.5;
+}
+
+.hive-dots {
+  stroke: var(--ink);
+  stroke-width: 2.4;
+  stroke-dasharray: 0.1 7;
+}
+
+.hive-bee-abdomen {
+  fill: var(--accent-1);
+  stroke: var(--ink);
+  stroke-width: 1.4;
+}
+
+.hive-bee-stripe {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.6;
+}
+
+.hive-bee-head {
+  fill: var(--ink);
+}
+
+.hive-bee-wing {
+  fill: color-mix(in srgb, var(--bg) 80%, transparent);
+  stroke: var(--ink);
+  stroke-width: 1;
+}
+
+.hive-bee-wings {
+  animation: hive-flap 0.07s linear infinite alternate;
+}
+
+.hive-bee.is-landed .hive-bee-wings {
+  animation-duration: 0.18s;
+}
+
+.hive-bee.is-landed {
+  animation: hive-bee-out 0.5s ease 1.4s forwards;
+}
+
+@keyframes hive-pop {
+  from { transform: scale(0.3); opacity: 0; }
+}
+
+@keyframes hive-shake {
+  25% { transform: translateX(-4px); }
+  50% { transform: translateX(4px); }
+  75% { transform: translateX(-2px); }
+}
+
+@keyframes hive-flap {
+  to { transform: scaleY(0.45); }
+}
+
+@keyframes hive-bee-out {
+  to { opacity: 0; }
+}
+
 .icon {
   width: 18px;
   height: 18px;
@@ -474,5 +623,10 @@ a {
   .key,
   .btn {
     transition: none;
+  }
+
+  .hive-end,
+  .hive-bee-wings {
+    animation: none;
   }
 }
